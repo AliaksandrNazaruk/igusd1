@@ -10,7 +10,7 @@ import logging
 from protocol import DryveSDO
 from machine import DriveStateMachine
 from od import ODKey
-from state_bits import Statusword
+from state_bits import Statusword, CW_START_MOTION
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,7 +51,8 @@ class DryveController:
 
         self.sdo.write(ODKey.TARGET_POSITION, position_mm)
 
-        # Дёргаем Controlword для старта движения (0x3F/0x0F) — опционально по конкретной реализации
+        # Стартуем движение согласно CiA-402: выставляем биты 0..4
+        self.sdo.write(ODKey.CONTROLWORD, CW_START_MOTION)
 
         if wait:
             self.wait_until_target_reached(target=position_mm, tolerance=tolerance_mm)
@@ -86,9 +87,8 @@ class DryveController:
         self.sdo.write(ODKey.MODE_OF_OPERATION, 6)  # Homing Mode
         # Homing method можно настроить через другие OD, если требуется
 
-        # Запуск гоминга — выставляем бит Homing Start в Controlword (обычно бит 4)
-        cw = self.sdo.read(ODKey.CONTROLWORD)
-        self.sdo.write(ODKey.CONTROLWORD, cw | 0x0010)  # Установить бит 4 (Homing Start)
+        # Запуск гоминга — подаём команду 0x001F как в эталонной реализации
+        self.sdo.write(ODKey.CONTROLWORD, CW_START_MOTION)
         time.sleep(0.1)
 
         if wait:
