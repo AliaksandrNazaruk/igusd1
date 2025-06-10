@@ -222,8 +222,8 @@ class ModbusTcpTransport:
             self._heartbeat_stop_event.wait(self._heartbeat_interval or 2.0)
 
     def _default_heartbeat_pdu(self) -> bytes:
-        # Формируем PDU для чтения statusword (0x6041)
-        # Зависит от твоего packet builder, временно минимально
-        return bytes([
-            0x2B, 0x0D, 0x00, 0x00, 0x00, 0x60, 0x41, 0x00, 0x00, 0x00, 0x00, 0x02
-        ])
+        """PDU для опроса statusword, сформированный через PacketBuilder."""
+        from packet import ModbusPacketBuilder
+        from od import ODKey
+
+        return ModbusPacketBuilder.build_read_request(ODKey.STATUSWORD)
