@@ -14,6 +14,7 @@ CW_ENABLE_OPERATION    = 0x000F  # биты 0-3 (0b0000_1111)
 CW_DISABLE_VOLTAGE     = 0x0000
 CW_QUICK_STOP          = 0x0002
 CW_FAULT_RESET         = 0x0080  # бит 7
+CW_START_MOTION        = 0x001F  # запуск профилированного перемещения/гоминга
 
 
 # Битовые маски Statusword (0x6041) — стандарт CiA 402
