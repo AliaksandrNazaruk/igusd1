@@ -19,6 +19,8 @@ class ModbusPacketBuilder:
     @staticmethod
     def build_read_request(od_key: ODKey) -> bytes:
         obj = OD_MAP[od_key]
+        if obj["access"] == AccessType.WO:
+            raise AccessViolation(f"Object {od_key} is write-only")
         pdu = struct.pack(
             ">BBB3BHB3BB",
             0x2B,                # Function
@@ -72,7 +74,12 @@ class ModbusPacketParser:
 
     @staticmethod
     def parse_response(
-        response: bytes, expected_tid: int
+        response: bytes,
+        expected_tid: int,
+        *,
+        expected_index: int | None = None,
+        expected_subindex: int | None = None,
+        expected_length: int | None = None,
     ) -> Tuple[int, bytes]:
         """
         Парсит полный Modbus TCP ответ, проверяет TID и Modbus exception.
@@ -102,5 +109,20 @@ class ModbusPacketParser:
         if func_code & 0x80:
             exc_code = payload[1]
             raise ModbusException(f"Modbus Exception func=0x{func_code:x}, code=0x{exc_code:x}")
+
+        if expected_index is not None:
+            if len(payload) < 13:
+                raise ModbusException("Response too short for index check")
+            index = struct.unpack(">H", payload[6:8])[0]
+            subindex = payload[8]
+            length_byte = payload[12]
+            if index != expected_index or subindex != (expected_subindex or subindex):
+                raise ModbusException(
+                    f"Response index mismatch: expected 0x{expected_index:04X}/{expected_subindex}, got 0x{index:04X}/{subindex}"
+                )
+            if expected_length is not None and length_byte != expected_length:
+                raise ModbusException(
+                    f"Response length mismatch: expected {expected_length}, got {length_byte}"
+                )
 
         return unit_id, payload
