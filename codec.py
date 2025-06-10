@@ -25,6 +25,8 @@ def pack_value(value: Any, dtype: DataType, scale: float = 1) -> bytes:
 
     if dtype == DataType.UINT8:
         return struct.pack("<B", int(scaled_val))
+    elif dtype == DataType.INT8:
+        return struct.pack("<b", int(scaled_val))
     elif dtype == DataType.UINT16:
         return struct.pack("<H", int(scaled_val))
     elif dtype == DataType.INT16:
@@ -46,6 +48,8 @@ def unpack_value(data: bytes, dtype: DataType, scale: float = 1) -> Any:
     """
     if dtype == DataType.UINT8:
         val = struct.unpack("<B", data)[0]
+    elif dtype == DataType.INT8:
+        val = struct.unpack("<b", data)[0]
     elif dtype == DataType.UINT16:
         val = struct.unpack("<H", data)[0]
     elif dtype == DataType.INT16:
