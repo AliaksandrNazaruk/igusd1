@@ -93,6 +93,8 @@ class ModbusPacketParser:
 
         # MBAP header: TransactionID(2), ProtocolID(2), Length(2), UnitID(1)
         tid, proto, length, unit_id = struct.unpack(">HHHB", response[:7])
+        if proto != 0:
+            raise ModbusException(f"Protocol ID mismatch: {proto}")
         if tid != expected_tid:
             raise TransactionMismatch(f"TID mismatch: expected {expected_tid}, got {tid}")
 

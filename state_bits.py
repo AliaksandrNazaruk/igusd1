@@ -4,7 +4,7 @@ state_bits.py — константы битов Controlword и Statusword, helpe
 © 2025 Your-Company / MIT-license
 """
 
-from enum import IntEnum, auto
+from enum import IntEnum
 
 
 # Битовые маски Controlword (0x6040) — стандарт CiA 402
@@ -45,25 +45,23 @@ class DriveState(IntEnum):
 
 
 def parse_drive_state(statusword: int) -> DriveState:
-    """
-    Определить состояние CiA 402 по битам statusword.
-    """
-    # https://www.canopen.org/fileadmin/resources/documents/CIA402.pdf
-    if not (statusword & SW_READY_TO_SWITCH_ON):
+    """Map *statusword* bits to a CiA‑402 drive state."""
+    if (statusword & 0x004F) == 0x0000:
         return DriveState.NOT_READY_TO_SWITCH_ON
-    if statusword & SW_SWITCH_ON_DISABLED:
+    if (statusword & 0x006F) == 0x0040:
         return DriveState.SWITCH_ON_DISABLED
-    if (statusword & SW_READY_TO_SWITCH_ON) and not (statusword & SW_SWITCHED_ON):
+    if (statusword & 0x006F) == 0x0021:
         return DriveState.READY_TO_SWITCH_ON
-    if (statusword & SW_SWITCHED_ON) and not (statusword & SW_OPERATION_ENABLED):
+    if (statusword & 0x006F) == 0x0023:
         return DriveState.SWITCHED_ON
-    if statusword & SW_OPERATION_ENABLED:
+    if (statusword & 0x006F) == 0x0027:
         return DriveState.OPERATION_ENABLED
-    if statusword & SW_QUICK_STOP:
+    if (statusword & 0x006F) == 0x0007:
         return DriveState.QUICK_STOP_ACTIVE
-    if statusword & SW_FAULT:
+    if (statusword & 0x004F) == 0x000F:
+        return DriveState.FAULT_REACTION_ACTIVE
+    if (statusword & 0x004F) == 0x0008:
         return DriveState.FAULT
-    # По умолчанию:
     return DriveState.NOT_READY_TO_SWITCH_ON
 
 
