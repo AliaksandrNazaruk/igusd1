@@ -7,9 +7,9 @@ packet.py — формирование и парсинг Modbus TCP telegram д�
 import struct
 from typing import Tuple
 
-from exceptions import TransactionMismatch, ModbusException
-from od import ODKey, OD_MAP
-from codec import pack_value, unpack_value
+from exceptions import TransactionMismatch, ModbusException, AccessViolation
+from od import ODKey, OD_MAP, AccessType
+from codec import pack_value
 
 
 class ModbusPacketBuilder:
@@ -40,11 +40,15 @@ class ModbusPacketBuilder:
     ) -> bytes:
         """Формирует Modbus PDU для записи объекта OD с данным значением."""
         obj = OD_MAP[od_key]
-        if obj["access"] == "ro":
-            raise ValueError(f"Object {od_key} is read-only")
+        if obj["access"] == AccessType.RO:
+            raise AccessViolation(f"Object {od_key} is read-only")
 
         packed_data = pack_value(value, obj["dtype"], obj.get("scale", 1))
         length = obj["length"]
+        if len(packed_data) != length:
+            raise ValueError(
+                f"Packed data for {od_key} has length {len(packed_data)}, expected {length}"
+            )
         # RW = 1 для записи
         header = struct.pack(
             ">BBB3BHB3BB",
