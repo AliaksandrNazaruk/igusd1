@@ -34,10 +34,23 @@ class ODKey(str, Enum):
     TARGET_VELOCITY = "target_velocity"
     ACTUAL_POSITION = "actual_position"
     ACTUAL_VELOCITY = "actual_velocity"
+    PROFILE_VELOCITY = "profile_velocity"
+    PROFILE_ACCELERATION = "profile_acceleration"
+    PROFILE_DECELERATION = "profile_deceleration"
+    FEED_CONSTANT_FEED = "feed_constant_feed"
+    FEED_CONSTANT_SHAFT_REVOLUTIONS = "feed_constant_shaft_revolutions"
+    HOMING_METHOD = "homing_method"
+    HOMING_SPEED_SEARCH_SWITCH = "homing_speed_search_switch"
+    HOMING_SPEED_SEARCH_ZERO = "homing_speed_search_zero"
+    HOMING_ACCELERATION = "homing_acceleration"
+    DIGITAL_INPUTS = "digital_inputs"
+    DIGITAL_OUTPUTS_PHYSICAL = "digital_outputs_physical"
+    DIGITAL_OUTPUTS_BITMASK = "digital_outputs_bitmask"
+    SUPPORTED_MODES = "supported_modes"
+    POSITION_DEMAND = "position_demand"
     ERROR_REGISTER = "error_register"
     PREDEFINED_ERROR_FIELD = "predefined_error_field"
     STORE_PARAMETERS = "store_parameters"
-    # Добавлять по необходимости
 
 
 OD_MAP = {
@@ -87,7 +100,7 @@ OD_MAP = {
         "length": 4,
         "access": AccessType.RW,
         "dtype": DataType.INT32,
-        "scale": 1000,  # scale for velocity mm/s
+        "scale": 100,  # value * 100 according to manual
     },
     ODKey.ACTUAL_POSITION: {
         "index": 0x6064,
@@ -103,7 +116,119 @@ OD_MAP = {
         "length": 4,
         "access": AccessType.RO,
         "dtype": DataType.INT32,
-        "scale": 1000,
+        "scale": 100,
+    },
+    ODKey.PROFILE_VELOCITY: {
+        "index": 0x6081,
+        "subindex": 0,
+        "length": 4,
+        "access": AccessType.RW,
+        "dtype": DataType.UINT32,
+        "scale": 100,
+    },
+    ODKey.PROFILE_ACCELERATION: {
+        "index": 0x6083,
+        "subindex": 0,
+        "length": 4,
+        "access": AccessType.RW,
+        "dtype": DataType.UINT32,
+        "scale": 100,
+    },
+    ODKey.PROFILE_DECELERATION: {
+        "index": 0x6084,
+        "subindex": 0,
+        "length": 4,
+        "access": AccessType.RW,
+        "dtype": DataType.UINT32,
+        "scale": 100,
+    },
+    ODKey.FEED_CONSTANT_FEED: {
+        "index": 0x6092,
+        "subindex": 1,
+        "length": 4,
+        "access": AccessType.RW,
+        "dtype": DataType.UINT32,
+        "scale": 1,
+    },
+    ODKey.FEED_CONSTANT_SHAFT_REVOLUTIONS: {
+        "index": 0x6092,
+        "subindex": 2,
+        "length": 4,
+        "access": AccessType.RW,
+        "dtype": DataType.UINT32,
+        "scale": 1,
+    },
+    ODKey.HOMING_METHOD: {
+        "index": 0x6098,
+        "subindex": 0,
+        "length": 1,
+        "access": AccessType.RO,
+        "dtype": DataType.INT8,
+        "scale": 1,
+    },
+    ODKey.HOMING_SPEED_SEARCH_SWITCH: {
+        "index": 0x6099,
+        "subindex": 1,
+        "length": 4,
+        "access": AccessType.RW,
+        "dtype": DataType.UINT32,
+        "scale": 100,
+    },
+    ODKey.HOMING_SPEED_SEARCH_ZERO: {
+        "index": 0x6099,
+        "subindex": 2,
+        "length": 4,
+        "access": AccessType.RW,
+        "dtype": DataType.UINT32,
+        "scale": 100,
+    },
+    ODKey.HOMING_ACCELERATION: {
+        "index": 0x609A,
+        "subindex": 0,
+        "length": 4,
+        "access": AccessType.RW,
+        "dtype": DataType.UINT32,
+        "scale": 100,
+    },
+    ODKey.DIGITAL_INPUTS: {
+        "index": 0x60FD,
+        "subindex": 0,
+        "length": 4,
+        "access": AccessType.RO,
+        "dtype": DataType.UINT32,
+        "scale": 1,
+    },
+    ODKey.DIGITAL_OUTPUTS_PHYSICAL: {
+        "index": 0x60FE,
+        "subindex": 1,
+        "length": 4,
+        "access": AccessType.RW,
+        "dtype": DataType.UINT32,
+        "scale": 1,
+    },
+    ODKey.DIGITAL_OUTPUTS_BITMASK: {
+        "index": 0x60FE,
+        "subindex": 2,
+        "length": 4,
+        "access": AccessType.RW,
+        "dtype": DataType.UINT32,
+        "scale": 1,
+    },
+    ODKey.SUPPORTED_MODES: {
+        "index": 0x6502,
+        "subindex": 0,
+        "length": 4,
+        "access": AccessType.RO,
+        "dtype": DataType.UINT32,
+        "scale": 1,
+    },
+    ODKey.POSITION_DEMAND: {
+        "index": 0x6063,
+        "subindex": 0,
+        "length": 4,
+        "access": AccessType.RO,
+        "dtype": DataType.INT32,
+        "scale": 100,
     },
     ODKey.ERROR_REGISTER: {
         "index": 0x1001,

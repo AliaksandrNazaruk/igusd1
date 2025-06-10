@@ -82,7 +82,7 @@ class DryveSDO:
                     tid,
                     expected_index=meta["index"],
                     expected_subindex=meta["subindex"],
-                    expected_length=meta["length"],
+                    expected_length=None,
                 )
                 return
             except ModbusException as e:
