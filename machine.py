@@ -7,7 +7,7 @@ machine.py — управление state machine dryve D1 (CiA 402)
 import time
 import logging
 
-from exceptions import DryveError, FaultState, OperationTimeout, StateError
+from exceptions import FaultState, OperationTimeout
 from od import ODKey
 from state_bits import (
     DriveState,

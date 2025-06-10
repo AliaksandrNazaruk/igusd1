@@ -14,7 +14,7 @@ from exceptions import (
     ModbusException,
 )
 from od import ODKey, OD_MAP, AccessType
-from codec import pack_value, unpack_value
+from codec import unpack_value
 from packet import ModbusPacketBuilder, ModbusPacketParser
 
 
@@ -53,11 +53,11 @@ class DryveSDO:
                 data_bytes = payload[-meta["length"] :]
                 value = unpack_value(data_bytes, meta["dtype"], meta.get("scale", 1))
                 return value
-            except ModbusException as e:
+            except ModbusException:
                 if attempt == self._max_attempts:
                     raise
                 time.sleep(0.1)
-            except DryveError as e:
+            except DryveError:
                 raise
         raise DryveError(f"Failed to read {od_key}")
 
@@ -85,11 +85,11 @@ class DryveSDO:
                     expected_length=None,
                 )
                 return
-            except ModbusException as e:
+            except ModbusException:
                 if attempt == self._max_attempts:
                     raise
                 time.sleep(0.1)
-            except DryveError as e:
+            except DryveError:
                 raise
         raise DryveError(f"Failed to write {od_key}")
 
