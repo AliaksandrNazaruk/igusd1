@@ -16,6 +16,7 @@ class AccessType(str, Enum):
 
 class DataType(str, Enum):
     UINT8 = "uint8"
+    INT8 = "int8"
     UINT16 = "uint16"
     INT16 = "int16"
     UINT32 = "uint32"
@@ -61,7 +62,7 @@ OD_MAP = {
         "subindex": 0,
         "length": 1,
         "access": AccessType.RW,
-        "dtype": DataType.INT8 if hasattr(DataType, "INT8") else DataType.INT16,
+        "dtype": DataType.INT8,
         "scale": 1,
     },
     ODKey.MODE_OF_OPERATION_DISPLAY: {
@@ -69,7 +70,7 @@ OD_MAP = {
         "subindex": 0,
         "length": 1,
         "access": AccessType.RO,
-        "dtype": DataType.INT8 if hasattr(DataType, "INT8") else DataType.INT16,
+        "dtype": DataType.INT8,
         "scale": 1,
     },
     ODKey.TARGET_POSITION: {

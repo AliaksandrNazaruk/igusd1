@@ -7,8 +7,13 @@ protocol.py — универсальный SDO-протокол для dryve-D1,
 import time
 from typing import Any
 
-from exceptions import DryveError, AccessViolation, ObjectNotFound, ModbusException
-from od import ODKey, OD_MAP
+from exceptions import (
+    DryveError,
+    AccessViolation,
+    ObjectNotFound,
+    ModbusException,
+)
+from od import ODKey, OD_MAP, AccessType
 from codec import pack_value, unpack_value
 from packet import ModbusPacketBuilder, ModbusPacketParser
 
@@ -30,7 +35,7 @@ class DryveSDO:
             raise ObjectNotFound(f"OD key {od_key} is not defined")
 
         meta = OD_MAP[od_key]
-        if meta["access"] not in ("ro", "rw"):
+        if meta["access"] not in (AccessType.RO, AccessType.RW):
             raise AccessViolation(f"Object {od_key} is not readable")
 
         for attempt in range(1, self._max_attempts + 1):
@@ -38,7 +43,13 @@ class DryveSDO:
                 pdu = ModbusPacketBuilder.build_read_request(od_key)
                 resp = self.transport.send_request(pdu)
                 tid = self.transport._transaction_id
-                _, payload = ModbusPacketParser.parse_response(resp, tid)
+                _, payload = ModbusPacketParser.parse_response(
+                    resp,
+                    tid,
+                    expected_index=meta["index"],
+                    expected_subindex=meta["subindex"],
+                    expected_length=meta["length"],
+                )
                 # payload содержит данные в конце, длина равна meta["length"]
                 data_bytes = payload[-meta["length"] :]
                 value = unpack_value(data_bytes, meta["dtype"], meta.get("scale", 1))
@@ -59,7 +70,7 @@ class DryveSDO:
             raise ObjectNotFound(f"OD key {od_key} is not defined")
 
         meta = OD_MAP[od_key]
-        if meta["access"] not in ("rw", "wo"):
+        if meta["access"] not in (AccessType.RW, AccessType.WO):
             raise AccessViolation(f"Object {od_key} is not writable")
 
         for attempt in range(1, self._max_attempts + 1):
@@ -68,7 +79,13 @@ class DryveSDO:
                 resp = self.transport.send_request(pdu)
                 tid = self.transport._transaction_id
                 # для записи payload может быть пустым или содержать подтверждение
-                _, payload = ModbusPacketParser.parse_response(resp, tid)
+                ModbusPacketParser.parse_response(
+                    resp,
+                    tid,
+                    expected_index=meta["index"],
+                    expected_subindex=meta["subindex"],
+                    expected_length=meta["length"],
+                )
                 return
             except ModbusException as e:
                 if attempt == self._max_attempts:

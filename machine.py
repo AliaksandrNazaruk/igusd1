@@ -126,12 +126,12 @@ class DriveStateMachine:
         _LOGGER.info("Stopping drive")
         self.disable_voltage()
 
-from transport import ModbusTcpTransport
-from protocol import DryveSDO
-from machine import DriveStateMachine
+if __name__ == "__main__":
+    from transport import ModbusTcpTransport
+    from protocol import DryveSDO
 
-with ModbusTcpTransport("127.0.0.1", debug=True) as transport:
-    sdo = DryveSDO(transport)
-    fsm = DriveStateMachine(sdo)
-    fsm.initialize_drive()
-    # теперь привод в Operation Enabled
+    with ModbusTcpTransport("127.0.0.1", debug=True) as transport:
+        sdo = DryveSDO(transport)
+        fsm = DriveStateMachine(sdo)
+        fsm.initialize_drive()
+        # теперь привод в Operation Enabled
