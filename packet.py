@@ -1,0 +1,102 @@
+"""
+packet.py — формирование и парсинг Modbus TCP telegram для dryve D1
+
+© 2025 Your-Company / MIT-license
+"""
+
+import struct
+from typing import Tuple
+
+from exceptions import TransactionMismatch, ModbusException
+from od import ODKey, OD_MAP
+from codec import pack_value, unpack_value
+
+
+class ModbusPacketBuilder:
+    """
+    Формирует Modbus PDU для чтения/записи объектов dryve D1 по протоколу MEI 0x0D, функция 0x2B.
+    """
+    @staticmethod
+    def build_read_request(od_key: ODKey) -> bytes:
+        obj = OD_MAP[od_key]
+        pdu = struct.pack(
+            ">BBB3BHB3BB",
+            0x2B,                # Function
+            0x0D,                # MEI Type
+            0x00,                # RW=0 (Read)
+            0x00, 0x00, 0x00,    # Reserved 3 bytes
+            obj["index"],        # Index (2 bytes)
+            obj["subindex"],     # Subindex (1 byte)
+            0x00, 0x00, 0x00,    # Reserved 3 bytes
+            obj["length"],       # Length (1 byte)
+        )
+        return pdu
+
+
+    @staticmethod
+    def build_write_request(
+        od_key: ODKey,
+        value: object,
+    ) -> bytes:
+        """Формирует Modbus PDU для записи объекта OD с данным значением."""
+        obj = OD_MAP[od_key]
+        if obj["access"] == "ro":
+            raise ValueError(f"Object {od_key} is read-only")
+
+        packed_data = pack_value(value, obj["dtype"], obj.get("scale", 1))
+        length = obj["length"]
+        # RW = 1 для записи
+        header = struct.pack(
+            ">BBB3BHB3BB",
+            0x2B,  # Функция
+            0x0D,  # MEI Type
+            0x01,  # RW=1 (Write)
+            0x00, 0x00, 0x00,  # Reserved
+            obj["index"],
+            obj["subindex"],
+            0x00, 0x00, 0x00,  # Reserved
+            length,
+        )
+        pdu = header + packed_data
+        return pdu
+
+
+class ModbusPacketParser:
+    """
+    Универсальный парсер ответа Modbus TCP с проверкой transaction ID и exception.
+    """
+
+    @staticmethod
+    def parse_response(
+        response: bytes, expected_tid: int
+    ) -> Tuple[int, bytes]:
+        """
+        Парсит полный Modbus TCP ответ, проверяет TID и Modbus exception.
+
+        :param response: полный пакет (MBAP header + PDU)
+        :param expected_tid: ожидаемый transaction id
+        :return: tuple (unit_id, payload)
+        """
+        if len(response) < 9:
+            raise ModbusException("Response too short")
+
+        # MBAP header: TransactionID(2), ProtocolID(2), Length(2), UnitID(1)
+        tid, proto, length, unit_id = struct.unpack(">HHHB", response[:7])
+        if tid != expected_tid:
+            raise TransactionMismatch(f"TID mismatch: expected {expected_tid}, got {tid}")
+
+        # Проверяем длину
+        if length != len(response) - 6:
+            raise ModbusException(f"Length mismatch: expected {length}, actual {len(response)-6}")
+
+        payload = response[7:]
+        if len(payload) == 0:
+            raise ModbusException("Empty payload")
+
+        # Проверка Modbus exception: MSB функции == 1 (0x80 + func)
+        func_code = payload[0]
+        if func_code & 0x80:
+            exc_code = payload[1]
+            raise ModbusException(f"Modbus Exception func=0x{func_code:x}, code=0x{exc_code:x}")
+
+        return unit_id, payload
