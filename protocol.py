@@ -41,8 +41,7 @@ class DryveSDO:
         for attempt in range(1, self._max_attempts + 1):
             try:
                 pdu = ModbusPacketBuilder.build_read_request(od_key)
-                resp = self.transport.send_request(pdu)
-                tid = self.transport._transaction_id
+                tid, resp = self.transport.send_request(pdu)
                 _, payload = ModbusPacketParser.parse_response(
                     resp,
                     tid,
@@ -76,8 +75,7 @@ class DryveSDO:
         for attempt in range(1, self._max_attempts + 1):
             try:
                 pdu = ModbusPacketBuilder.build_write_request(od_key, value)
-                resp = self.transport.send_request(pdu)
-                tid = self.transport._transaction_id
+                tid, resp = self.transport.send_request(pdu)
                 # для записи payload может быть пустым или содержать подтверждение
                 ModbusPacketParser.parse_response(
                     resp,

@@ -116,9 +116,13 @@ class ModbusPacketParser:
             index = struct.unpack(">H", payload[6:8])[0]
             subindex = payload[8]
             length_byte = payload[12]
-            if index != expected_index or subindex != (expected_subindex or subindex):
+            if index != expected_index:
                 raise ModbusException(
-                    f"Response index mismatch: expected 0x{expected_index:04X}/{expected_subindex}, got 0x{index:04X}/{subindex}"
+                    f"Response index mismatch: expected 0x{expected_index:04X}, got 0x{index:04X}"
+                )
+            if expected_subindex is not None and subindex != expected_subindex:
+                raise ModbusException(
+                    f"Response subindex mismatch: expected {expected_subindex}, got {subindex}"
                 )
             if expected_length is not None and length_byte != expected_length:
                 raise ModbusException(

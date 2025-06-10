@@ -134,11 +134,12 @@ class ModbusTcpTransport:
             buf += chunk
         return buf
 
-    def send_request(self, pdu: bytes) -> bytes:
+    def send_request(self, pdu: bytes) -> tuple[int, bytes]:
         """
-        Отправить Modbus PDU (без MBAP), получить полный ответ (MBAP + PDU).
+        Отправить Modbus PDU (без MBAP) и получить ответ.
 
-        Реализовано с lock, retry, reconnect, проверкой Transaction ID.
+        Возвращает кортеж ``(transaction_id, response_bytes)``. Метод потокобезопасен,
+        выполняет автоматический reconnect и повторяет запрос при ошибках.
         """
         with self._lock:
             last_exception = None
@@ -170,7 +171,7 @@ class ModbusTcpTransport:
                     if self.debug:
                         _LOGGER.debug(f"[RX {resp_tid:#06x}] {full_resp.hex(' ')}")
 
-                    return full_resp
+                    return tid, full_resp
 
                 except (ConnectionLost, ConnectionTimeout, TransportError, socket.error) as ex:
                     last_exception = ex
@@ -214,6 +215,7 @@ class ModbusTcpTransport:
                 else:
                     # По умолчанию — отправить чтение statusword (0x6041)
                     pdu = self._default_heartbeat_pdu()
+                    # ignore response tuple
                     self.send_request(pdu)
             except Exception as e:
                 _LOGGER.warning(f"[heartbeat] Exception in heartbeat: {e}")
