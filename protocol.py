@@ -7,15 +7,15 @@ protocol.py — универсальный SDO-протокол для dryve-D1,
 import time
 from typing import Any
 
-from exceptions import (
+from drivers.igus_scripts.exceptions import (
     DryveError,
     AccessViolation,
     ObjectNotFound,
     ModbusException,
 )
-from od import ODKey, OD_MAP, AccessType
-from codec import unpack_value
-from packet import ModbusPacketBuilder, ModbusPacketParser
+from drivers.igus_scripts.od import ODKey, OD_MAP, AccessType
+from drivers.igus_scripts.codec import unpack_value
+from drivers.igus_scripts.packet import ModbusPacketBuilder, ModbusPacketParser
 
 
 class DryveSDO:
@@ -42,13 +42,7 @@ class DryveSDO:
             try:
                 pdu = ModbusPacketBuilder.build_read_request(od_key)
                 tid, resp = self.transport.send_request(pdu)
-                _, payload = ModbusPacketParser.parse_response(
-                    resp,
-                    tid,
-                    expected_index=meta["index"],
-                    expected_subindex=meta["subindex"],
-                    expected_length=meta["length"],
-                )
+                _, payload = ModbusPacketParser.parse_response(resp,tid,expected_index=meta["index"],expected_subindex=meta["subindex"],expected_length=meta["length"],)
                 # payload содержит данные в конце, длина равна meta["length"]
                 data_bytes = payload[-meta["length"] :]
                 value = unpack_value(data_bytes, meta["dtype"], meta.get("scale", 1))

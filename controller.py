@@ -8,10 +8,10 @@ import time
 import logging
 from dataclasses import dataclass, field
 
-from protocol import DryveSDO
-from machine import DriveStateMachine
-from od import ODKey
-from state_bits import Statusword, CW_START_MOTION, DriveState, SW_OP_MODE_SPECIFIC, parse_drive_state
+from drivers.igus_scripts.protocol import DryveSDO
+from drivers.igus_scripts.machine import DriveStateMachine
+from drivers.igus_scripts.od import ODKey
+from drivers.igus_scripts.state_bits import Statusword, CW_START_MOTION, DriveState, SW_OP_MODE_SPECIFIC, parse_drive_state
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class DriveStatus:
     velocity_mm_s: float = 0.0
     statusword: int = 0
     error_register: int = 0
-    state: DriveState = DriveState.NOT_READY_TO_SWITCH_ON
+    state: bool = False
     updated_at: float = field(default_factory=time.time)
 
 
@@ -50,14 +50,15 @@ class DryveController:
         pos = self.sdo.read(ODKey.ACTUAL_POSITION)
         vel = self.sdo.read(ODKey.ACTUAL_VELOCITY)
         sw = self.sdo.read(ODKey.STATUSWORD)
-        err = self.sdo.read(ODKey.ERROR_REGISTER)
+        # err = self.sdo.read(ODKey.ERROR_REGISTER)
+        hom = bool(self.sdo.read(ODKey.HOMING_STATUS))
         st = parse_drive_state(sw)
         self.status = DriveStatus(
             position_mm=pos,
             velocity_mm_s=vel,
             statusword=sw,
-            error_register=err,
-            state=st,
+            error_register=0,
+            state=hom,
             updated_at=time.time(),
         )
         return self.status
@@ -96,7 +97,7 @@ class DryveController:
             self.wait_until_target_reached(target=position_mm, tolerance=tolerance_mm)
         self.update_status()
 
-    def wait_until_target_reached(self, target: float = None, tolerance: float = 0.1, timeout: float = 10.0):
+    def wait_until_target_reached(self, target: float = None, tolerance: float = 0.1, timeout: float = 100.0):
         """
         Ожидает, пока TargetReached или позиция не окажется вблизи target (если задан).
         """
@@ -116,6 +117,11 @@ class DryveController:
                     return
             time.sleep(0.05)
         raise TimeoutError("Timeout waiting for target position reached")
+    
+    def set_mode(self, mode, wait: bool = True):
+        self.sdo.write(ODKey.MODE_OF_OPERATION, mode)  # Homing Mode
+        time.sleep(1)
+
 
     def home(self, wait: bool = True):
         """
@@ -134,7 +140,7 @@ class DryveController:
             self.wait_homing_complete()
         self.update_status()
 
-    def wait_homing_complete(self, timeout: float = 20.0):
+    def wait_homing_complete(self, timeout: float = 100.0):
         """
         Ждёт завершения гоминга (обычно по специальному биту или достижению позиции 0).
         """
@@ -144,7 +150,8 @@ class DryveController:
             status = self.sdo.read(ODKey.STATUSWORD)
             sw = Statusword(status)
             if sw.fault:
-                raise RuntimeError("Fault detected during homing")
+                _LOGGER.info(f"[DEBUG] FAULT DETECTED! STATUSWORD=0x{status:04X}")
+                raise RuntimeError("Fault detected during move")
             if sw.target_reached:
                 _LOGGER.info("Homing complete (TargetReached)")
                 self.update_status()
@@ -171,14 +178,19 @@ class DryveController:
     def get_actual_position(self) -> float:
         """Возврат кешированной позиции."""
         return self.status.position_mm
-
+    
+    def get_homing_status(self) -> bool:
+        """Возврат кешированной позиции."""
+        return self.status.state
+    
     def get_actual_velocity(self) -> float:
         """Возврат кешированной скорости."""
         return self.status.velocity_mm_s
 
     def get_statusword(self) -> int:
-        """Возврат последнего statusword."""
-        return self.status.statusword
+        """Читает statusword непосредственно с драйва (SDO)."""
+        return self.sdo.read(ODKey.STATUSWORD)
+
 
     def get_error_register(self) -> int:
         """Возврат последнего значения error register."""

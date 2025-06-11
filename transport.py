@@ -13,7 +13,7 @@ import time
 import logging
 from typing import Optional, Callable
 
-from exceptions import TransportError, ConnectionLost, ConnectionTimeout
+from drivers.igus_scripts.exceptions import TransportError, ConnectionLost, ConnectionTimeout
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -141,6 +141,7 @@ class ModbusTcpTransport:
         Возвращает кортеж ``(transaction_id, response_bytes)``. Метод потокобезопасен,
         выполняет автоматический reconnect и повторяет запрос при ошибках.
         """
+        
         with self._lock:
             last_exception = None
             for attempt in range(1, self.max_retries + 1):
@@ -152,10 +153,10 @@ class ModbusTcpTransport:
                     length = len(pdu) + 1  # +1 unit_id
                     header = struct.pack(">HHHB", tid, 0, length, self.unit_id)
                     packet = header + pdu
-
+                    
                     if self.debug:
                         _LOGGER.debug(f"[TX {tid:#06x}] {packet.hex(' ')}")
-
+                    print(list(packet))
                     self._sendall(packet)
 
                     mbap = self._recv_exact(7)
@@ -167,7 +168,7 @@ class ModbusTcpTransport:
                     payload = self._recv_exact(payload_len)
 
                     full_resp = mbap + payload
-
+                    print(list(full_resp))
                     if self.debug:
                         _LOGGER.debug(f"[RX {resp_tid:#06x}] {full_resp.hex(' ')}")
 

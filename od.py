@@ -51,9 +51,18 @@ class ODKey(str, Enum):
     ERROR_REGISTER = "error_register"
     PREDEFINED_ERROR_FIELD = "predefined_error_field"
     STORE_PARAMETERS = "store_parameters"
+    HOMING_STATUS = "homing_status"
 
 
 OD_MAP = {
+    ODKey.HOMING_STATUS: {
+        "index": 0x2014,
+        "subindex": 0,
+        "length": 2,
+        "access": AccessType.RO,
+        "dtype": DataType.UINT16,
+        "scale": 1,
+    },
     ODKey.CONTROLWORD: {
         "index": 0x6040,
         "subindex": 0,
@@ -92,7 +101,7 @@ OD_MAP = {
         "length": 4,
         "access": AccessType.RW,
         "dtype": DataType.INT32,
-        "scale": 100,  # scale according to manua (e.g. 0.01 mm units)
+        "scale": 1,  # scale according to manua (e.g. 0.01 mm units)
     },
     ODKey.TARGET_VELOCITY: {
         "index": 0x60FF,
@@ -100,7 +109,7 @@ OD_MAP = {
         "length": 4,
         "access": AccessType.RW,
         "dtype": DataType.INT32,
-        "scale": 100,  # value * 100 according to manual
+        "scale": 1,  # value * 100 according to manual
     },
     ODKey.ACTUAL_POSITION: {
         "index": 0x6064,
@@ -108,7 +117,7 @@ OD_MAP = {
         "length": 4,
         "access": AccessType.RO,
         "dtype": DataType.INT32,
-        "scale": 100,
+        "scale": 1,
     },
     ODKey.ACTUAL_VELOCITY: {
         "index": 0x606C,
@@ -124,7 +133,7 @@ OD_MAP = {
         "length": 4,
         "access": AccessType.RW,
         "dtype": DataType.UINT32,
-        "scale": 100,
+        "scale": 1,
     },
     ODKey.PROFILE_ACCELERATION: {
         "index": 0x6083,
@@ -132,7 +141,7 @@ OD_MAP = {
         "length": 4,
         "access": AccessType.RW,
         "dtype": DataType.UINT32,
-        "scale": 100,
+        "scale": 1,
     },
     ODKey.PROFILE_DECELERATION: {
         "index": 0x6084,
@@ -140,7 +149,7 @@ OD_MAP = {
         "length": 4,
         "access": AccessType.RW,
         "dtype": DataType.UINT32,
-        "scale": 100,
+        "scale": 1,
     },
     ODKey.FEED_CONSTANT_FEED: {
         "index": 0x6092,

@@ -7,9 +7,9 @@ machine.py — управление state machine dryve D1 (CiA 402)
 import time
 import logging
 
-from exceptions import FaultState, OperationTimeout
-from od import ODKey
-from state_bits import (
+from drivers.igus_scripts.exceptions import FaultState, OperationTimeout
+from drivers.igus_scripts.od import ODKey
+from drivers.igus_scripts.state_bits import (
     DriveState,
     parse_drive_state,
     Statusword,
@@ -26,7 +26,7 @@ class DriveStateMachine:
     Требует объект DryveSDO для доступа к Controlword/Statusword.
     """
 
-    def __init__(self, sdo, poll_delay=0.05, timeout=5.0):
+    def __init__(self, sdo, poll_delay=1, timeout=5.0):
         self.sdo = sdo
         self.poll_delay = poll_delay  # период опроса статуса
         self.timeout = timeout        # таймаут ожидания перехода
@@ -63,6 +63,10 @@ class DriveStateMachine:
 
     def fault_reset(self) -> None:
         """Сбрасывает fault, если есть."""
+        self.set_mode(6)
+        time.sleep(0.5)
+        self.set_mode(1)
+        time.sleep(0.5)
         sw = self._read_statusword()
         if not sw.fault:
             _LOGGER.debug("No fault to reset")
@@ -75,10 +79,16 @@ class DriveStateMachine:
         self.wait_for_state(DriveState.SWITCH_ON_DISABLED)
 
     def shutdown(self) -> None:
+
         """Переходит в состояние Shutdown (готов к switch on)."""
         _LOGGER.info("Sending shutdown command")
         self._write_controlword(controlword_for_state(DriveState.READY_TO_SWITCH_ON))
         self.wait_for_state(DriveState.READY_TO_SWITCH_ON)
+        # self.disable_voltage(
+        
+    def set_mode(self, mode, wait: bool = True):
+        self.sdo.write(ODKey.MODE_OF_OPERATION, mode)  # Homing Mode
+        time.sleep(1)
 
     def switch_on(self) -> None:
         """Переходит в состояние Switch On."""
@@ -114,10 +124,16 @@ class DriveStateMachine:
             self.fault_reset()
         except FaultState:
             _LOGGER.warning("Fault present at start, tried reset")
+        
 
         self.shutdown()
+        
         self.switch_on()
+        
         self.enable_operation()
+
+
+        
 
     def stop_drive(self) -> None:
         """
@@ -130,8 +146,21 @@ if __name__ == "__main__":
     from transport import ModbusTcpTransport
     from protocol import DryveSDO
 
-    with ModbusTcpTransport("127.0.0.1", debug=True) as transport:
+    with ModbusTcpTransport("192.168.1.230", debug=True) as transport:
         sdo = DryveSDO(transport)
         fsm = DriveStateMachine(sdo)
         fsm.initialize_drive()
-        # теперь привод в Operation Enabled
+        while True:
+            try:
+                fsm.shutdown()
+                time.sleep(2)
+                fsm.switch_on()
+                time.sleep(2)
+            except Exception as e:
+                print(f"[Demo] Ошибка: {e}")
+                if e.args[0] is  'Drive reports FAULT bit set':
+                    try:
+                        fsm.fault_reset()
+                    except:
+                        print("error")
+

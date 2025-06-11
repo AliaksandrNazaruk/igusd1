@@ -7,40 +7,35 @@ packet.py — формирование и парсинг Modbus TCP telegram д�
 import struct
 from typing import Tuple
 
-from exceptions import TransactionMismatch, ModbusException, AccessViolation
-from od import ODKey, OD_MAP, AccessType
-from codec import pack_value
+from drivers.igus_scripts.exceptions import TransactionMismatch, ModbusException, AccessViolation
+from drivers.igus_scripts.od import ODKey, OD_MAP, AccessType
+from drivers.igus_scripts.codec import pack_value
 
 
 class ModbusPacketBuilder:
-    """
-    Формирует Modbus PDU для чтения/записи объектов dryve D1 по протоколу MEI 0x0D, функция 0x2B.
-    """
     @staticmethod
-    def build_read_request(od_key: ODKey) -> bytes:
+    def build_read_request(od_key: "ODKey") -> bytes:
         obj = OD_MAP[od_key]
         if obj["access"] == AccessType.WO:
             raise AccessViolation(f"Object {od_key} is write-only")
-        pdu = struct.pack(
-            ">BBB3BHB3BB",
-            0x2B,                # Function
-            0x0D,                # MEI Type
-            0x00,                # RW=0 (Read)
-            0x00, 0x00, 0x00,    # Reserved 3 bytes
-            obj["index"],        # Index (2 bytes)
-            obj["subindex"],     # Subindex (1 byte)
-            0x00, 0x00, 0x00,    # Reserved 3 bytes
-            obj["length"],       # Length (1 byte)
-        )
+        pdu = bytes([
+            0x2B,                  # Function
+            0x0D,                  # MEI Type
+            0x00,                  # RW=0 (Read)
+            0x00, 0x00,            # Reserved 3 bytes
+            (obj["index"] >> 8) & 0xFF,   # Index high
+            obj["index"] & 0xFF,          # Index low
+            obj["subindex"],       # Subindex
+            0x00, 0x00, 0x00, # Reserved 4 bytes
+            obj["length"],         # Length
+        ])
         return pdu
-
 
     @staticmethod
     def build_write_request(
-        od_key: ODKey,
+        od_key: "ODKey",
         value: object,
     ) -> bytes:
-        """Формирует Modbus PDU для записи объекта OD с данным значением."""
         obj = OD_MAP[od_key]
         if obj["access"] == AccessType.RO:
             raise AccessViolation(f"Object {od_key} is read-only")
@@ -51,20 +46,19 @@ class ModbusPacketBuilder:
             raise ValueError(
                 f"Packed data for {od_key} has length {len(packed_data)}, expected {length}"
             )
-        # RW = 1 для записи
-        header = struct.pack(
-            ">BBB3BHB3BB",
-            0x2B,  # Функция
-            0x0D,  # MEI Type
-            0x01,  # RW=1 (Write)
-            0x00, 0x00, 0x00,  # Reserved
-            obj["index"],
-            obj["subindex"],
-            0x00, 0x00, 0x00,  # Reserved
-            length,
-        )
-        pdu = header + packed_data
-        return pdu
+        header = bytes([
+            0x2B,                  # Function
+            0x0D,                  # MEI Type
+            0x01,                  # RW=1 (Write)
+            0x00, 0x00,      # Reserved 3 bytes
+            (obj["index"] >> 8) & 0xFF,   # Index high
+            obj["index"] & 0xFF,          # Index low
+            obj["subindex"],       # Subindex
+            0x00, 0x00, 0x00, # Reserved 4 bytes
+            length,                # Length
+        ])
+        return header + packed_data
+
 
 
 class ModbusPacketParser:
@@ -77,9 +71,9 @@ class ModbusPacketParser:
         response: bytes,
         expected_tid: int,
         *,
-        expected_index: int | None = None,
-        expected_subindex: int | None = None,
-        expected_length: int | None = None,
+        expected_index = None,
+        expected_subindex = None,
+        expected_length = None,
     ) -> Tuple[int, bytes]:
         """
         Парсит полный Modbus TCP ответ, проверяет TID и Modbus exception.
@@ -101,7 +95,7 @@ class ModbusPacketParser:
         # Проверяем длину
         if length != len(response) - 6:
             raise ModbusException(f"Length mismatch: expected {length}, actual {len(response)-6}")
-
+        
         payload = response[7:]
         if len(payload) == 0:
             raise ModbusException("Empty payload")
@@ -113,15 +107,19 @@ class ModbusPacketParser:
             raise ModbusException(f"Modbus Exception func=0x{func_code:x}, code=0x{exc_code:x}")
 
         if expected_index is not None:
-            if len(payload) < 13:
+            if len(payload) < 10:
                 raise ModbusException("Response too short for index check")
-            index = struct.unpack(">H", payload[6:8])[0]
-            subindex = payload[8]
-            length_byte = payload[12]
-            if index != expected_index:
+            index = struct.unpack("<H", payload[5:7])[0]
+
+            subindex = payload[7]
+            length_byte = payload[11]
+            # ---- Исправление: сравнивай с little-endian значением
+            le_expected_index = int.from_bytes(expected_index.to_bytes(2, "big"), "little")
+            if index != le_expected_index:
                 raise ModbusException(
-                    f"Response index mismatch: expected 0x{expected_index:04X}, got 0x{index:04X}"
+                    f"Response index mismatch: expected 0x{expected_index:04X} (le={le_expected_index:04X}), got 0x{index:04X}"
                 )
+
             if expected_subindex is not None and subindex != expected_subindex:
                 raise ModbusException(
                     f"Response subindex mismatch: expected {expected_subindex}, got {subindex}"

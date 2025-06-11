@@ -7,7 +7,7 @@ codec.py — упаковка и распаковка значений dryve-d1 
 import struct
 from typing import Any
 
-from od import DataType
+from drivers.igus_scripts.od import DataType
 
 
 class CodecError(Exception):
