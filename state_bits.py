@@ -1,7 +1,7 @@
 """
 state_bits.py — константы битов Controlword и Statusword, helpers для dryve-D1
 
-© 2025 Your-Company / MIT-license
+© 2025 Aliaksandr Nazaruk / MIT-license
 """
 
 from enum import IntEnum
