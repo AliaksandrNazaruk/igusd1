@@ -1,5 +1,6 @@
 """
-controller.py — High-level API для dryve D1 (igus), объединяющий state machine, SDO, диагностику.
+controller.py — high level API for the igus dryve D1 drive integrating the state
+machine, SDO layer and diagnostics.
 
 © 2025 Aliaksandr Nazaruk / MIT-license
 """
@@ -32,9 +33,9 @@ class DriveStatus:
     updated_at: float = field(default_factory=time.time)
 
 class DryveController:
-    """
-    High-level API для управления dryve D1.
-    Все команды безопасно проверяют состояния и могут поднимать исключения.
+    """High level API for controlling the dryve D1.
+
+    All commands validate the state first and may raise exceptions.
     """
 
     def __init__(self, sdo: DryveSDO, fsm: DriveStateMachine):
@@ -52,21 +53,19 @@ class DryveController:
     def close(self):
         print("[DryveController] close() called")
         try:
-            # Здесь только то, что безопасно. 
-            # Остановить heartbeat, обнулить ссылки, корректно завершить работу,
-            # Но НЕ опрашивай лишний раз hardware!
-            # Например:
-            # self.sdo.close()  # если есть у SDO метод закрытия
-            # self.fsm.stop_drive() # если уверен, что железо онлайн
+            # Only perform operations that are safe here:
+            # stop heartbeat, clear references, shut down cleanly,
+            # but avoid additional hardware queries.
+            # For example:
+            # self.sdo.close()  # if SDO exposes a close() method
+            # self.fsm.stop_drive()  # if you are sure the hardware is online
             pass
         except Exception as e:
             print(f"Exception in close(): {e}")
             _LOGGER.error(f"Exception in close(): {e}")
 
     def __enter__(self):
-        """
-        Вход в контекстный менеджер.
-        """
+        """Enter context manager."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -76,17 +75,15 @@ class DryveController:
         except Exception as e:
             print(f"Exception in __exit__: {e}")
             _LOGGER.error(f"Exception in __exit__: {e}")
-        # Не подавлять исключение, если только специально не нужно
+        # Do not suppress exceptions unless explicitly required
 
     def __del__(self):
-        """
-        На всякий случай, если объект удаляется — попытаться корректно завершить работу.
-        """
+        """Attempt graceful shutdown when the object is deleted."""
         print("[DryveController] __del__ called")
         try:
             self.close()
         except Exception as e:
-            # Деструктор — избегаем аварий, поэтому только warning
+            # Destructor should avoid raising, so only log a warning
             _LOGGER.warning(f"Exception during controller destruction: {e}")
 
     def update_status(self) -> DriveStatus:
@@ -111,20 +108,18 @@ class DryveController:
         return self.status
 
     def initialize(self):
-        """
-        Безопасная инициализация привода: сброс fault, переход в Operation Enabled.
-        """
+        """Safely initialize the drive: clear faults and enter Operation Enabled state."""
         sw = Statusword(self.get_statusword())
         self.fsm.initialize_drive()
         self.update_status()
 
     def move_to_position(self, position_mm: int, velocity_mm_s: int = 2000, acceleration_mm_s: int = 2000):
-        """
-        Команда движения в позицию (Profile Position Mode).
-        :param position_mm: целевая позиция (мм, float)
-        :param velocity_mm_s: (опционально) скорость (мм/с)
-        :param wait: ждать ли достижения цели
-        :param tolerance_mm: допустимая ошибка по положению (мм)
+        """Move to an absolute position using *Profile Position Mode*.
+
+        :param position_mm: target position in millimetres
+        :param velocity_mm_s: optional velocity in mm/s
+        :param wait: unused, kept for API compatibility
+        :param tolerance_mm: allowed position error in mm
         """
         try:
             _LOGGER.info(f"Move to position {position_mm:.3f} mm")
@@ -140,9 +135,7 @@ class DryveController:
             self.update_status()
 
     def home(self):
-        """
-        Запуск гоминга (режим homing, стандартный режим 6 для CiA 402).
-        """
+        """Start the homing sequence (mode 6 of CiA‑402)."""
         try:
             _LOGGER.info("Starting homing sequence")
             self.fsm.enable_operation()
@@ -155,9 +148,7 @@ class DryveController:
             self.update_status()
 
     def wait_motion_complete(self):
-        """
-        Ждёт завершения гоминга (обычно по специальному биту или достижению позиции 0).
-        """
+        """Wait until motion completes (typically by monitoring TargetReached or position 0)."""
         self._is_motion = True
         positions = []
         timer = 0
@@ -185,42 +176,38 @@ class DryveController:
             self.update_status()
             
     def stop(self):
-        """
-        Быстрая остановка и выключение привода.
-        """
+        """Perform a quick stop and disable the drive."""
         _LOGGER.info("STOP requested")
         self.fsm.quick_stop()
         self.update_status()
 
     def emergency_shutdown(self):
-        """
-        Эмердженси — сразу выключает напряжение.
-        """
+        """Emergency shutdown — immediately disable power."""
         _LOGGER.critical("EMERGENCY SHUTDOWN!")
         self.fsm.disable_voltage()
         self.update_status()
 
     def get_actual_position(self) -> int:
-        """Возврат кешированной позиции."""
+        """Return the current position."""
         return self.sdo.read(ODKey.ACTUAL_POSITION)
     
     def get_homing_status(self) -> bool:
-        """Возврат кешированной позиции."""
+        """Return homing completion flag."""
         return bool(self.sdo.read(ODKey.HOMING_STATUS))
     
     def get_actual_velocity(self) -> int:
-        """Возврат кешированной скорости."""
+        """Return current velocity."""
         return self.sdo.read(ODKey.ACTUAL_VELOCITY)
     
     def get_actual_acceleration(self) -> int:
         return self.sdo.read(ODKey.PROFILE_ACCELERATION)
     
     def get_statusword(self) -> int:
-        """Читает statusword непосредственно с драйва (SDO)."""
+        """Read the statusword directly from the drive via SDO."""
         return self.sdo.read(ODKey.STATUSWORD)
 
     def get_error(self) -> bool:
-        """Возврат последнего значения error register."""
+        """Return the latest value of the error register."""
         sw = Statusword(self.get_statusword())
         self.status.error = sw.fault
         return sw.fault
@@ -228,37 +215,37 @@ class DryveController:
 
     @property
     def position(self) -> int:
-        """Последнее известное положение в мм."""
+        """Last known position in mm."""
         return self.status.position
     
     @property
     def velocity(self) -> int:
-        """Последняя измеренная скорость мм/с."""
+        """Last measured velocity in mm/s."""
         return self.status.velocity
     
     @property
     def acceleration(self) -> int:
-        """Последняя измеренная скорость мм/с."""
+        """Last measured acceleration in mm/s²."""
         return self.status.acceleration
     
     @property
     def statusword(self) -> int:
-        """Последняя измеренная скорость мм/с."""
+        """Last read statusword value."""
         return self.status.statusword
     
     @property
     def is_homed(self) -> bool:
-        """Флаг завершенного гоминга (bit 12 statusword)."""
+        """True if homing completed (bit 12 of statusword)."""
         return self.status.is_homed
     @property
 
     def is_motion(self) -> bool:
-        """Флаг завершенного гоминга (bit 12 statusword)."""
+        """True while motion command is in progress."""
         return self.status.is_motion
     
     @property
     def error_state(self) -> bool:
-        """Последний прочитанный error register."""
+        """Latest error register state."""
         return self.status.error
 
 
@@ -267,11 +254,11 @@ class DryveController:
 #     from protocol import DryveSDO
 #     from machine import DriveStateMachine
 #     import threading
-#     print("Нагрузочный пезапуск в цикле")
+#     print("Stress test restart loop")
 #     n = 0
 #     while True:
 #         n = n+1
-#         print("Цикл: " +str(n))
+#         print(f"Cycle: {n}")
 #         while True:
 #             with ModbusTcpTransport("127.0.0.1", debug=True) as transport:
 #                 sdo = DryveSDO(transport)
@@ -280,5 +267,5 @@ class DryveController:
 #                     try:
 #                         ctrl.get_actual_position()
 #                     except:
-#                         print("Оставшиеся потоки:", threading.enumerate())
+#                         print("Remaining threads:", threading.enumerate())
 #                         break

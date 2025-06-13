@@ -19,9 +19,8 @@ class IgusCommand:
         self.result_queue = result_queue
 
 class IgusMotor:
-    """
-    Singleton-объект для dryve D1: работает через новый стек, но с совместимым API.
-    """
+    """Singleton-style helper for dryve D1 using the new stack while providing
+    a compatible API."""
 
     def __init__(self, ip_address: str, port: int = 502):
         self.ip_address = ip_address
@@ -36,7 +35,7 @@ class IgusMotor:
         self._status_lock = threading.Lock()
         self._stop_event = threading.Event()
 
-        # Внутренние состояния (кэш, не опрашивается лишний раз!)
+        # Internal cached state (avoids unnecessary polling)
         self._connected = False
         self._active = False
         self._position = 0.0
@@ -55,7 +54,7 @@ class IgusMotor:
     def _start_connection(self, retries=3, retry_delay=3.0):
         while True:
             try:
-                # ------> ВАЖНО! Не with, а явное создание!
+                # IMPORTANT: create explicitly instead of using ``with``
                 self._transport = ModbusTcpTransport(self.ip_address, self.port)
                 self._transport.connect()
                 self._sdo = DryveSDO(self._transport)
@@ -179,12 +178,12 @@ class IgusMotor:
                 raise result
         return None
 
-# === Пример использования ===
+# === Usage example ===
 if __name__ == "__main__":
     import logging
 
     logging.basicConfig(
-        level=logging.DEBUG,  # или INFO для менее подробных логов
+        level=logging.DEBUG,  # use INFO for less verbose logs
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     )
     motor = IgusMotor("192.168.1.230", 502)
@@ -201,7 +200,7 @@ if __name__ == "__main__":
             motor.move_to_position(15000)
             print(motor.get_status())
         except:
-            print(f"[Demo] Ошибка: ")
+            print("[Demo] Error:")
             # if e.args[0] == 'Drive reports FAULT bit set' or e.args[0] == 'Timeout waiting for state OPERATION_ENABLED':
             try:
                 print(motor.get_status())
