@@ -8,15 +8,15 @@ protocol.py — generic SDO protocol for the dryve D1 operating on top of
 import time
 from typing import Any
 
-from drivers.igus_scripts.exceptions import (
+from .exceptions import (
     DryveError,
     AccessViolation,
     ObjectNotFound,
     ModbusException,
 )
-from drivers.igus_scripts.od import ODKey, OD_MAP, AccessType
-from drivers.igus_scripts.codec import unpack_value
-from drivers.igus_scripts.packet import ModbusPacketBuilder, ModbusPacketParser
+from .od import ODKey, OD_MAP, AccessType
+from .codec import unpack_value
+from .packet import ModbusPacketBuilder, ModbusPacketParser
 
 
 class DryveSDO:

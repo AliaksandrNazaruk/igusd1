@@ -2,14 +2,10 @@ import threading
 import queue
 import time
 from typing import Callable, Any, Optional, Dict
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/../.."))
-
-from drivers.igus_scripts.transport import ModbusTcpTransport
-from drivers.igus_scripts.protocol import DryveSDO
-from drivers.igus_scripts.machine import DriveStateMachine
-from drivers.igus_scripts.controller import DryveController
+from .transport import ModbusTcpTransport
+from .protocol import DryveSDO
+from .machine import DriveStateMachine
+from .controller import DryveController
 
 class IgusCommand:
     def __init__(self, func: Callable, args: tuple = (), kwargs: dict = None, result_queue: Optional[queue.Queue] = None):

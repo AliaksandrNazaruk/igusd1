@@ -11,7 +11,7 @@ CiA‑402 profile.
 - `DryveSDO` implementation for reading/writing Object Dictionary entries.
 - `DriveStateMachine` for dealing with status and commands.
 - High‑level `DryveController` and thread‑safe `IgusMotor` facade.
-- `IgusD1Emulator` for local testing without physical hardware.
+- Emulator script for local testing without physical hardware.
 - Unified exception hierarchy in `exceptions.py`.
 
 ## Project structure
@@ -42,7 +42,7 @@ The driver depends only on the Python standard library, no extra packages are re
 
 
 ```python
-from igus_motor import IgusMotor
+from igusd1 import IgusMotor
 
 motor = IgusMotor("192.168.1.230")
 
@@ -58,12 +58,18 @@ while True:
     print(motor.get_status())
 ```
 
+### Installation
+
+Install the package using pip:
+
+```bash
+pip install igusd1
+```
 
 During development you can run the emulator:
 
-
 ```bash
-python emulator.py
+python -m igusd1.emulator
 ```
 
 It starts a small Modbus TCP server on port 502 so the code can be debugged without an actual dryve D1.

@@ -7,9 +7,9 @@ packet.py — building and parsing Modbus TCP telegrams for the dryve D1.
 import struct
 from typing import Tuple
 
-from drivers.igus_scripts.exceptions import TransactionMismatch, ModbusException, AccessViolation
-from drivers.igus_scripts.od import ODKey, OD_MAP, AccessType
-from drivers.igus_scripts.codec import pack_value
+from .exceptions import TransactionMismatch, ModbusException, AccessViolation
+from .od import ODKey, OD_MAP, AccessType
+from .codec import pack_value
 
 
 class ModbusPacketBuilder:

@@ -13,7 +13,7 @@ import time
 import logging
 from typing import Optional, Callable
 
-from drivers.igus_scripts.exceptions import TransportError, ConnectionLost, ConnectionTimeout
+from .exceptions import TransportError, ConnectionLost, ConnectionTimeout
 
 
 _LOGGER = logging.getLogger(__name__)
