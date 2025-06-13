@@ -1,6 +1,6 @@
 """
 exceptions.py  –  Common exceptions for the dryve-d1 driver
-© 2025  Your-Company / MIT-license
+© 2025 Aliaksandr Nazaruk / MIT-license
 
 This module defines a *single* inheritance tree for all errors that can
 occur inside the driver.  Import it everywhere instead of raising raw
