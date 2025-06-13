@@ -2,13 +2,9 @@
 transport.py — надежный, отказоустойчивый Modbus TCP клиент с поддержкой reconnect,
 heartbeat, thread-safe и extensible logging.
 
-© 2025 Your-Company / MIT-license
-
+© 2025 Aliaksandr Nazaruk / MIT-license
 Важность: отвечает за стабильный, безошибочный обмен с приводом dryve D1.
 """
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/../.."))
 
 import struct
 import socket
@@ -238,14 +234,3 @@ class ModbusTcpTransport:
 
         return ModbusPacketBuilder.build_read_request(ODKey.STATUSWORD)
 
-
-# import time
-
-# def dummy_callback():
-#     print("[heartbeat] ping")
-
-# with ModbusTcpTransport("127.0.0.1", debug=True, heartbeat_interval=0.1, heartbeat_callback=dummy_callback) as tr:
-#     time.sleep(2)   # Даем heartbeat поработать
-
-# print("Вышли из контекста — heartbeat должен остановиться!")
-# time.sleep(1)
