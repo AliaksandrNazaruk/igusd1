@@ -2,7 +2,7 @@
 emulator.py — simple Modbus TCP server emulating a minimal subset of the
 Igus dryve D1 controller. It allows testing the driver code without real hardware.
 
-© 2025 Your-Company / MIT-license
+© 2025 Aliaksandr Nazaruk / MIT-license
 """
 
 from __future__ import annotations
