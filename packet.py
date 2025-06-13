@@ -1,7 +1,7 @@
 """
 packet.py — формирование и парсинг Modbus TCP telegram для dryve D1
 
-© 2025 Your-Company / MIT-license
+© 2025 Aliaksandr Nazaruk / MIT-license
 """
 
 import struct
