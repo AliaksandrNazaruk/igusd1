@@ -1,7 +1,7 @@
 """
 machine.py — управление state machine dryve D1 (CiA 402)
 
-© 2025 Your-Company / MIT-license
+© 2025 Aliaksandr Nazaruk / MIT-license
 """
 
 import time
