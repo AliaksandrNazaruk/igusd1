@@ -1,7 +1,7 @@
 """
 codec.py — упаковка и распаковка значений dryve-d1 по OD спецификации
 
-© 2025 Your-Company / MIT-license
+© 2025 Aliaksandr Nazaruk / MIT-license
 """
 
 import struct
