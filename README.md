@@ -1,4 +1,4 @@
-# igusd1
+# Igus dryve d1 python driver
 
 Python driver for the **Igus dryve D1** controller.  The library implements the
 full stack for Modbus TCP communication and drive control according to the
