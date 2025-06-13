@@ -71,13 +71,7 @@ class DryveSDO:
                 pdu = ModbusPacketBuilder.build_write_request(od_key, value)
                 tid, resp = self.transport.send_request(pdu)
                 # для записи payload может быть пустым или содержать подтверждение
-                ModbusPacketParser.parse_response(
-                    resp,
-                    tid,
-                    expected_index=meta["index"],
-                    expected_subindex=meta["subindex"],
-                    expected_length=None,
-                )
+                ModbusPacketParser.parse_response(resp,tid,expected_index=meta["index"],expected_subindex=meta["subindex"],expected_length=None,)
                 return
             except ModbusException:
                 if attempt == self._max_attempts:
@@ -87,11 +81,3 @@ class DryveSDO:
                 raise
         raise DryveError(f"Failed to write {od_key}")
 
-    def store_parameters(self) -> None:
-        """
-        Специальная команда записи в объект Store Parameters (0x1010, subindex=1),
-        для сохранения конфигурации в энергонезависимой памяти.
-        """
-        store_key = ODKey.STORE_PARAMETERS
-        value = 0x65766173  # 'evas' в hex, согласно мануалу
-        self.write(store_key, value)

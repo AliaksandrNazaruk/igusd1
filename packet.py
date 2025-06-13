@@ -104,20 +104,19 @@ class ModbusPacketParser:
         func_code = payload[0]
         if func_code & 0x80:
             exc_code = payload[1]
-            raise ModbusException(f"Modbus Exception func=0x{func_code:x}, code=0x{exc_code:x}")
+            # raise ModbusException(f"Modbus Exception func=0x{func_code:x}, code=0x{exc_code:x}")
 
         if expected_index is not None:
             if len(payload) < 10:
                 raise ModbusException("Response too short for index check")
-            index = struct.unpack("<H", payload[5:7])[0]
+            index = struct.unpack(">H", payload[5:7])[0]
 
             subindex = payload[7]
             length_byte = payload[11]
             # ---- Исправление: сравнивай с little-endian значением
-            le_expected_index = int.from_bytes(expected_index.to_bytes(2, "big"), "little")
-            if index != le_expected_index:
+            if index != expected_index:
                 raise ModbusException(
-                    f"Response index mismatch: expected 0x{expected_index:04X} (le={le_expected_index:04X}), got 0x{index:04X}"
+                    f"Response index mismatch: expected 0x{expected_index:04X}, got 0x{index:04X}"
                 )
 
             if expected_subindex is not None and subindex != expected_subindex:

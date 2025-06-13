@@ -6,6 +6,10 @@ heartbeat, thread-safe и extensible logging.
 
 Важность: отвечает за стабильный, безошибочный обмен с приводом dryve D1.
 """
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/../.."))
+
 import struct
 import socket
 import threading
@@ -111,7 +115,7 @@ class ModbusTcpTransport:
 
         try:
             self._sock.sendall(data)
-        except (BrokenPipeError, ConnectionResetError) as ex:
+        except (BrokenPipeError, ConnectionResetError, OSError) as ex:
             self._sock.close()
             self._sock = None
             raise ConnectionLost("Connection lost during send") from ex
@@ -156,19 +160,24 @@ class ModbusTcpTransport:
                     
                     if self.debug:
                         _LOGGER.debug(f"[TX {tid:#06x}] {packet.hex(' ')}")
-                    print(list(packet))
+                    # print(list(packet))
                     self._sendall(packet)
 
                     mbap = self._recv_exact(7)
+                    if len(mbap) != 7:
+                        raise TransportError(f"MBAP header too short: got {len(mbap)} bytes")
                     resp_tid, protocol, resp_len, unit_id = struct.unpack(">HHHB", mbap)
                     if resp_tid != tid:
                         raise TransportError(f"Transaction ID mismatch: sent {tid}, received {resp_tid}")
 
                     payload_len = resp_len - 1
                     payload = self._recv_exact(payload_len)
+                    if len(payload) != payload_len:
+                        raise TransportError(f"Payload length mismatch: expected {payload_len}, got {len(payload)}")
+
 
                     full_resp = mbap + payload
-                    print(list(full_resp))
+                    # print(list(full_resp))
                     if self.debug:
                         _LOGGER.debug(f"[RX {resp_tid:#06x}] {full_resp.hex(' ')}")
 
@@ -185,7 +194,6 @@ class ModbusTcpTransport:
     # ================= Heartbeat ===============
 
     def start_heartbeat(self) -> None:
-        """Запустить heartbeat-поток, чтобы удерживать соединение."""
         if self._heartbeat_thread and self._heartbeat_thread.is_alive():
             return  # Уже запущен
 
@@ -211,9 +219,9 @@ class ModbusTcpTransport:
         """Фоновый loop для heartbeat."""
         while not self._heartbeat_stop_event.is_set():
             try:
-                if self._heartbeat_callback:
-                    self._heartbeat_callback()
-                else:
+                # if self._heartbeat_callback:
+                #     self._heartbeat_callback()
+                # else:
                     # По умолчанию — отправить чтение statusword (0x6041)
                     pdu = self._default_heartbeat_pdu()
                     # ignore response tuple
@@ -221,6 +229,7 @@ class ModbusTcpTransport:
             except Exception as e:
                 _LOGGER.warning(f"[heartbeat] Exception in heartbeat: {e}")
             self._heartbeat_stop_event.wait(self._heartbeat_interval or 2.0)
+        print("[heartbeat] Gracefully exited heartbeat loop")
 
     def _default_heartbeat_pdu(self) -> bytes:
         """PDU для опроса statusword, сформированный через PacketBuilder."""
@@ -228,3 +237,15 @@ class ModbusTcpTransport:
         from od import ODKey
 
         return ModbusPacketBuilder.build_read_request(ODKey.STATUSWORD)
+
+
+# import time
+
+# def dummy_callback():
+#     print("[heartbeat] ping")
+
+# with ModbusTcpTransport("127.0.0.1", debug=True, heartbeat_interval=0.1, heartbeat_callback=dummy_callback) as tr:
+#     time.sleep(2)   # Даем heartbeat поработать
+
+# print("Вышли из контекста — heartbeat должен остановиться!")
+# time.sleep(1)
