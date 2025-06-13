@@ -1,17 +1,20 @@
 # igusd1
 
-Python-драйвер для контроллера **Igus dryve D1**. Библиотека реализует полный стек для обмена по Modbus TCP и управления приводом по профилю CiA‑402.
+Python driver for the **Igus dryve D1** controller.  The library implements the
+full stack for Modbus TCP communication and drive control according to the
+CiA‑402 profile.
 
-## Возможности
+## Features
 
-- Надёжный транспорт `ModbusTcpTransport` с автоматическим переподключением и heartbeat.
-- Реализация SDO-протокола (`DryveSDO`) для чтения/записи объекта словаря устройства.
-- Машина состояний привода (`DriveStateMachine`) для работы со статусом и командами.
-- Высокоуровневый контроллер (`DryveController`) и потокобезопасный фасад `IgusMotor`.
-- Эмулятор `IgusD1Emulator` для локального тестирования без реального оборудования.
-- Единая иерархия исключений в `exceptions.py`.
+- Reliable `ModbusTcpTransport` with automatic reconnection and heartbeat
+  support.
+- `DryveSDO` implementation for reading/writing Object Dictionary entries.
+- `DriveStateMachine` for dealing with status and commands.
+- High‑level `DryveController` and thread‑safe `IgusMotor` facade.
+- `IgusD1Emulator` for local testing without physical hardware.
+- Unified exception hierarchy in `exceptions.py`.
 
-## Структура проекта
+## Project structure
 
 ```
 Application code
@@ -27,25 +30,27 @@ ModbusPacketBuilder    — packet.py → codec.py
 ModbusTcpTransport     — transport.py
 ```
 
-Дополнительную информацию см. в `driver_structure.txt`.
+For more details see `driver_structure.txt`.
 
-## Требования
+## Requirements
 
-- Python 3.10 или новее
+- Python 3.10 or newer
 
-Установка зависимостей не требуется, библиотека использует только стандартную библиотеку Python.
+The driver depends only on the Python standard library, no extra packages are required.
 
-## Пример использования
+## Usage example
+
 
 ```python
 from igus_motor import IgusMotor
 
 motor = IgusMotor("192.168.1.230")
 
-# Гоминг
+# Homing
 motor.home()
 
-# Перемещение между точками
+# Move back and forth
+
 while True:
     motor.move_to_position(5000)
     print(motor.get_status())
@@ -53,15 +58,18 @@ while True:
     print(motor.get_status())
 ```
 
-Для разработки можно запустить эмулятор:
+
+During development you can run the emulator:
+
 
 ```bash
 python emulator.py
 ```
 
-Он поднимает небольшой сервер Modbus TCP на порту 502 и позволяет отлаживать код без реального dryve D1.
+It starts a small Modbus TCP server on port 502 so the code can be debugged without an actual dryve D1.
 
-## Лицензия
+## License
 
-Код распространяется под лицензией MIT (см. заголовки файлов).
+The code is released under the MIT license (see file headers for details).
+
 
