@@ -1,7 +1,7 @@
 """
 controller.py — High-level API для dryve D1 (igus), объединяющий state machine, SDO, диагностику.
 
-© 2025 Your-Company / MIT-license
+© 2025 Aliaksandr Nazaruk / MIT-license
 """
 
 import time
