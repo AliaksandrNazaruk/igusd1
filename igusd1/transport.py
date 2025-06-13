@@ -1,9 +1,9 @@
 """
-transport.py — надежный, отказоустойчивый Modbus TCP клиент с поддержкой reconnect,
-heartbeat, thread-safe и extensible logging.
+transport.py — robust Modbus TCP client with reconnect support, heartbeat,
+thread safety and extensible logging.
 
 © 2025 Aliaksandr Nazaruk / MIT-license
-Важность: отвечает за стабильный, безошибочный обмен с приводом dryve D1.
+Responsible for stable and reliable communication with the dryve D1.
 """
 
 import struct
@@ -13,7 +13,7 @@ import time
 import logging
 from typing import Optional, Callable
 
-from drivers.igus_scripts.exceptions import TransportError, ConnectionLost, ConnectionTimeout
+from .exceptions import TransportError, ConnectionLost, ConnectionTimeout
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -62,8 +62,8 @@ class ModbusTcpTransport:
         self._heartbeat_stop_event = threading.Event()
 
     def connect(self) -> None:
-        """Установить TCP соединение."""
-        self.close()  # Закрыть старое, если есть
+        """Establish the TCP connection."""
+        self.close()  # Close previous connection if any
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(self.timeout)
         try:
@@ -191,7 +191,7 @@ class ModbusTcpTransport:
 
     def start_heartbeat(self) -> None:
         if self._heartbeat_thread and self._heartbeat_thread.is_alive():
-            return  # Уже запущен
+            return  # Already running
 
         self._heartbeat_stop_event.clear()
         self._heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
@@ -201,7 +201,7 @@ class ModbusTcpTransport:
             _LOGGER.debug(f"[heartbeat] Started heartbeat thread with interval {self._heartbeat_interval}s")
 
     def stop_heartbeat(self) -> None:
-        """Остановить heartbeat-поток."""
+        """Stop the heartbeat thread."""
         if self._heartbeat_thread:
             self._heartbeat_stop_event.set()
             self._heartbeat_thread.join(timeout=2)
@@ -212,13 +212,13 @@ class ModbusTcpTransport:
                 _LOGGER.debug("[heartbeat] Stopped heartbeat thread")
 
     def _heartbeat_loop(self) -> None:
-        """Фоновый loop для heartbeat."""
+        """Background loop for heartbeat."""
         while not self._heartbeat_stop_event.is_set():
             try:
                 # if self._heartbeat_callback:
                 #     self._heartbeat_callback()
                 # else:
-                    # По умолчанию — отправить чтение statusword (0x6041)
+                    # By default send a Statusword (0x6041) read
                     pdu = self._default_heartbeat_pdu()
                     # ignore response tuple
                     self.send_request(pdu)

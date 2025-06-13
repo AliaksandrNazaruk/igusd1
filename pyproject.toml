@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "igusd1"
+version = "0.1.0"
+description = "Python driver for the igus dryve D1 controller"
+authors = [{name = "Aliaksandr Nazaruk"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+
+[project.urls]
+Homepage = "https://example.com"
