@@ -1,5 +1,6 @@
 """
-codec.py — упаковка и распаковка значений dryve-d1 по OD спецификации
+codec.py — packing and unpacking of dryve D1 values according to the Object
+Dictionary specification.
 
 © 2025 Aliaksandr Nazaruk / MIT-license
 """
@@ -7,7 +8,7 @@ codec.py — упаковка и распаковка значений dryve-d1 
 import struct
 from typing import Any
 
-from drivers.igus_scripts.od import DataType
+from .od import DataType
 
 
 class CodecError(Exception):
@@ -15,11 +16,10 @@ class CodecError(Exception):
 
 
 def pack_value(value: Any, dtype: DataType, scale: float = 1) -> bytes:
-    """
-    Преобразует value в байты с учётом типа данных и масштаба.
-    value — число (int, float)
-    dtype — тип из od.DataType
-    scale — коэффициент масштабирования (value * scale → хранится в устройстве)
+    """Pack ``value`` into bytes using ``dtype`` and optional ``scale``.
+
+    ``value`` may be ``int`` or ``float``.  ``scale`` is applied as
+    ``value * scale`` before storing in the device.
     """
     scaled_val = value * scale if scale != 1 else value
 
@@ -42,9 +42,9 @@ def pack_value(value: Any, dtype: DataType, scale: float = 1) -> bytes:
 
 
 def unpack_value(data: bytes, dtype: DataType, scale: float = 1) -> Any:
-    """
-    Распаковывает байты data в значение с учётом типа и масштаба.
-    Возвращает float или int, в зависимости от dtype.
+    """Unpack ``data`` according to ``dtype`` and optional ``scale``.
+
+    Returns ``float`` or ``int`` depending on ``dtype``.
     """
     if dtype == DataType.UINT8:
         val = struct.unpack("<B", data)[0]

@@ -1,5 +1,5 @@
 """
-od.py — Object Dictionary (OD) описание для dryve-D1
+od.py — Object Dictionary (OD) description for the dryve D1 controller.
 
 © 2025 Aliaksandr Nazaruk / MIT-license
 """
@@ -22,7 +22,7 @@ class DataType(str, Enum):
     UINT32 = "uint32"
     INT32 = "int32"
     FLOAT32 = "float32"
-    # Можно расширять при необходимости
+    # Can be extended as needed
 
 
 class ODKey(str, Enum):
@@ -250,7 +250,7 @@ OD_MAP = {
     ODKey.PREDEFINED_ERROR_FIELD: {
         "index": 0x1003,
         "subindex": 0,
-        "length": 8,  # количество ошибок в списке, зависит от subindex 1..8
+        "length": 8,  # number of errors in the list depends on subindex 1..8
         "access": AccessType.RO,
         "dtype": DataType.UINT32,
         "scale": 1,
@@ -263,6 +263,6 @@ OD_MAP = {
         "dtype": DataType.UINT32,
         "scale": 1,
     },
-    # Добавлять новые по мере необходимости...
+    # Add new entries as needed...
 }
 
