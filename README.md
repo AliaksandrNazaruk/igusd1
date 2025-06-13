@@ -40,6 +40,7 @@ The driver depends only on the Python standard library, no extra packages are re
 
 ## Usage example
 
+
 ```python
 from igus_motor import IgusMotor
 
@@ -49,6 +50,7 @@ motor = IgusMotor("192.168.1.230")
 motor.home()
 
 # Move back and forth
+
 while True:
     motor.move_to_position(5000)
     print(motor.get_status())
@@ -56,7 +58,9 @@ while True:
     print(motor.get_status())
 ```
 
+
 During development you can run the emulator:
+
 
 ```bash
 python emulator.py
@@ -67,4 +71,5 @@ It starts a small Modbus TCP server on port 502 so the code can be debugged with
 ## License
 
 The code is released under the MIT license (see file headers for details).
+
 

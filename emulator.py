@@ -1,206 +1,100 @@
-"""
-emulator.py — simple Modbus TCP server emulating a minimal subset of the
-Igus dryve D1 controller. It allows testing the driver code without real hardware.
-
-© 2025 Aliaksandr Nazaruk / MIT-license
-"""
-
-from __future__ import annotations
-
 import socket
 import struct
 import threading
-import time
 
 MODBUS_PORT = 502
 
-
-class MotorState:
-    """A very small model of the drive's state."""
-
-    def __init__(self) -> None:
+class FakeDriveState:
+    def __init__(self):
+        self.fault =False
+        self.internal_limit =False
+        self.op_mode_specific =False
+        self.operation_enabled =False
+        self.quick_stop =True
+        self.ready_to_switch_on =True
+        self.remote =True
+        self.switch_on_disabled =False
+        self.switched_on =False
+        self.target_reached =True
+        self.value = 33
+        self.voltage_enabled =False
+        self.warning = 0
         self.position = 0
         self.velocity = 0
-        self.target_position = 0
-        self.status_word = 0x0006  # Shutdown by default
-        self.operation_mode = 1  # 1 = Profile Position
-        self.is_moving = False
-        self._move_thread: threading.Thread | None = None
+        self.homed = 0
+    def emulator(self,list):
+        if list == [0, 0, 0, 0, 0, 13, 0, 43, 13, 0, 0, 0, 96, 65, 0, 0, 0, 0, 2]:
+            return [0, 0, 0, 0, 0, 15, 0, 43, 13, 0, 0, 0, 96, 65, 0, 0, 0, 0, 2, self.value, 6]
+        
+        if list == [0, 0, 0, 0, 0, 15, 0, 43, 13, 1, 0, 0, 96, 64, 0, 0, 0, 0, 2, 6, 0]:
+            self.value = 33
+            return [0, 0, 0, 0, 0, 13, 0, 43, 13, 1, 0, 0, 96, 64, 0, 0, 0, 0, 0]
+        
+        if list == [0, 0, 0, 0, 0, 15, 0, 43, 13, 1, 0, 0, 96, 64, 0, 0, 0, 0, 2, 128, 0]:
+            self.value = 39
+            return [0, 0, 0, 0, 0, 15, 0, 43, 13, 1, 0, 0, 96, 64, 0, 0, 0, 0, 2, 39, 6]
 
-    def move_to(self, pos: int, vel: int) -> None:
-        if self.is_moving:
-            return
-        self.target_position = pos
-        self.velocity = vel
-        self.is_moving = True
-        self._move_thread = threading.Thread(target=self._do_move, daemon=True)
-        self._move_thread.start()
+        if list == [0, 0, 0, 0, 0, 15, 0, 43, 13, 1, 0, 0, 96, 64, 0, 0, 0, 0, 2, 7, 0]:
+            self.value = 35
+            return [0, 0, 0, 0, 0, 13, 0, 43, 13, 1, 0, 0, 96, 64, 0, 0, 0, 0, 0]
+        
+        if list == [0, 0, 0, 0, 0, 15, 0, 43, 13, 1, 0, 0, 96, 64, 0, 0, 0, 0, 2, 15, 0]:
+            self.value = 39
+            return [0, 0, 0, 0, 0, 13, 0, 43, 13, 1, 0, 0, 96, 64, 0, 0, 0, 0, 0]
+        
+        if list == [0, 0, 0, 0, 0, 13, 0, 43, 13, 0, 0, 0, 96, 100, 0, 0, 0, 0, 4]:
+            return [0, 0, 0, 0, 0, 17, 0, 43, 13, 0, 0, 0, 96, 100, 0, 0, 0, 0, 4, self.position, 0, 0, 0]
+        
+        if list == [0, 0, 0, 0, 0, 13, 0, 43, 13, 0, 0, 0, 96, 108, 0, 0, 0, 0, 4]:
+            return [0, 0, 0, 0, 0, 17, 0, 43, 13, 0, 0, 0, 96, 108, 0, 0, 0, 0, 4, self.velocity, 0, 0, 0]
+        
+        if list == [0, 0, 0, 0, 0, 13, 0, 43, 13, 0, 0, 0, 16, 1, 0, 0, 0, 0, 1]:
+            return [0, 0, 0, 0, 0, 11, 0, 171, 255, 0, 6, 13, 206, 0, 0, 2, 6]
+        
+        if list == [0, 0, 0, 0, 0, 14, 0, 43, 13, 1, 0, 0, 96, 96, 0, 0, 0, 0, 1, 6]:
+            return [0, 0, 0, 0, 0, 15, 0, 43, 13, 0, 0, 0, 96, 96, 0, 0, 0, 0, 2, self.value, 6]
 
-    def _do_move(self) -> None:
-        duration = abs(self.target_position - self.position) / max(abs(self.velocity), 1)
-        steps = int(duration * 10)
-        delta = (self.target_position - self.position) / max(steps, 1)
-        for _ in range(steps):
-            self.position += delta
-            self.status_word = 0x001F  # moving
-            time.sleep(0.1)
-        self.position = self.target_position
-        self.status_word = 0x0027  # arrived, operation enabled
-        self.is_moving = False
+        if list == [0, 0, 0, 0, 0, 14, 0, 43, 13, 1, 0, 0, 96, 96, 0, 0, 0, 0, 1, 1]:
+            return [0, 0, 0, 0, 0, 15, 0, 43, 13, 0, 0, 0, 96, 96, 0, 0, 0, 0, 2, self.value, 6]
+        
+        if list == [0, 0, 0, 0, 0, 13, 0, 43, 13, 0, 0, 0, 32, 20, 0, 0, 0, 0, 2]:
+            return [0, 0, 0, 0, 0, 17, 0, 43, 13, 0, 0, 0, 32, 20, 0, 0, 0, 0, 2, self.homed, 0, 0, 0]
+        
+fakeDrive = FakeDriveState()
+timer = 0
+def handle_client(conn, state: FakeDriveState):
+    global timer
+    try:
+        while True:
+            timer = timer+1
+            if timer == 20:
+                timer = 0
+                fakeDrive.value = fakeDrive.value | 0x08  # Устанавливаем бит 3
 
-
-class IgusD1Emulator:
-    """Minimal Modbus TCP emulator for the dryve D1 controller."""
-
-    def __init__(self, host: str = "0.0.0.0", port: int = MODBUS_PORT) -> None:
-        self.state = MotorState()
-        self.host = host
-        self.port = port
-        self._server_sock: socket.socket | None = None
-        self._running = False
-
-    def start(self) -> None:
-        """Run the emulator server loop."""
-        self._running = True
-        self._server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._server_sock.bind((self.host, self.port))
-        self._server_sock.listen(5)
-        print(f"Emulator started at {self.host}:{self.port}")
-        while self._running:
-            try:
-                client, addr = self._server_sock.accept()
-            except OSError:
+            mbap = list(conn.recv(24))
+            if not mbap:
                 break
-            print(f"Client: {addr}")
-            threading.Thread(target=self.handle_client, args=(client,), daemon=True).start()
+            tid = mbap[1]
+            mbap[1]=0
+            response = fakeDrive.emulator(mbap)
+            response[1] = tid
+            array = bytes(response)
+            conn.send(array)
+    except Exception as e:
+        print(f"Client error: {e}")
+    finally:
+        conn.close()
 
-    def stop(self) -> None:
-        """Stop the emulator and close the socket."""
-        self._running = False
-        if self._server_sock:
-            try:
-                self._server_sock.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
-            self._server_sock.close()
-            self._server_sock = None
-
-    def handle_client(self, client: socket.socket) -> None:
-        """Handle a single client connection."""
-        try:
-            while self._running:
-                mbap = self._recv_exact(client, 7)
-                if not mbap:
-                    break
-                tid, pid, length, uid = struct.unpack(">HHHB", mbap)
-                pdu = self._recv_exact(client, length - 1)
-                if not pdu:
-                    break
-                response_pdu = self.handle_pdu(pdu)
-                resp_mbap = struct.pack(">HHHB", tid, 0, len(response_pdu) + 1, 0)
-                client.sendall(resp_mbap + response_pdu)
-        except Exception as e:
-            print(f"Client handler error: {e}")
-        finally:
-            client.close()
-
-    # ----------------------------------------------------------
-    def _recv_exact(self, sock: socket.socket, n: int) -> bytes | None:
-        data = b""
-        while len(data) < n:
-            chunk = sock.recv(n - len(data))
-            if not chunk:
-                return None
-            data += chunk
-        return data
-
-    def _modbus_exception(self, func_code: int, exc_code: int) -> bytes:
-        return bytes([func_code | 0x80, exc_code])
-
-    def _build_response(self, req_pdu: bytes, data: bytes) -> bytes:
-        header = req_pdu[:9]
-        reserved = b"\x00\x00\x00"
-        length_byte = len(data).to_bytes(1, "big")
-        return header + reserved + length_byte + data
-
-    def _handle_controlword(self, ctrl: int) -> None:
-        """Very small subset of CiA‑402 state transitions."""
-
-        # Map common control commands to resulting status words
-        if ctrl == 0x0006:  # shutdown -> ready to switch on
-            self.state.status_word = 0x0021
-            self.state.is_moving = False
-        elif ctrl == 0x0007:  # switch on
-            self.state.status_word = 0x0023
-            self.state.is_moving = False
-        elif ctrl == 0x000F:  # enable operation
-            self.state.status_word = 0x0027
-            self.state.is_moving = False
-        elif ctrl == 0x0000:  # disable voltage
-            self.state.status_word = 0x0040
-            self.state.is_moving = False
-        elif (ctrl & 0x001F) == 0x001F:  # start motion command
-            self.state.status_word = 0x001F
-            if not self.state.is_moving:
-                self.state.move_to(self.state.target_position, self.state.velocity)
-        else:
-            # Unknown command, just store controlword value
-            self.state.status_word = ctrl & 0xFFFF
-
-    def handle_pdu(self, pdu: bytes) -> bytes:
-        """Process a Modbus MEI 0x0D request PDU."""
-        if len(pdu) < 13:
-            return self._modbus_exception(pdu[0] if pdu else 0x2B, 0x03)
-        if pdu[0] != 0x2B or pdu[1] != 0x0D:
-            return self._modbus_exception(pdu[0], 0x01)
-
-        rw = pdu[2]
-        obj_idx = (pdu[6] << 8) | pdu[7]
-        sub_idx = pdu[8]
-        length = pdu[12]
-
-        if length > 8:
-            return self._modbus_exception(pdu[0], 0x03)
-
-        if rw == 0:
-            if obj_idx == 0x6041:
-                data = self.state.status_word.to_bytes(2, "little")
-                return self._build_response(pdu, data)
-            if obj_idx == 0x6064:
-                data = int(self.state.position).to_bytes(4, "little", signed=True)
-                return self._build_response(pdu, data)
-            if obj_idx == 0x606C:
-                data = int(self.state.velocity).to_bytes(4, "little", signed=True)
-                return self._build_response(pdu, data)
-            return self._modbus_exception(pdu[0], 0x02)
-
-        if rw == 1:
-            expected_length = 13 + length
-            if len(pdu) < expected_length:
-                return self._modbus_exception(pdu[0], 0x03)
-
-            data_bytes = pdu[13 : 13 + length]
-            if obj_idx == 0x6040:
-                ctrl = int.from_bytes(data_bytes, "little")
-                self._handle_controlword(ctrl)
-                return self._build_response(pdu, data_bytes)
-            if obj_idx == 0x607A:
-                pos = int.from_bytes(data_bytes, "little", signed=True)
-                self.state.target_position = pos
-                return self._build_response(pdu, data_bytes)
-            if obj_idx == 0x6081:
-                vel = int.from_bytes(data_bytes, "little", signed=True)
-                self.state.velocity = vel
-                return self._build_response(pdu, data_bytes)
-            return self._modbus_exception(pdu[0], 0x02)
-
-        return self._modbus_exception(pdu[0], 0x01)
-
+def main():
+    state = FakeDriveState()
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(("0.0.0.0", MODBUS_PORT))
+    s.listen(5)
+    print(f"Emulator started at 0.0.0.0:{MODBUS_PORT}")
+    while True:
+        conn, addr = s.accept()
+        threading.Thread(target=handle_client, args=(conn, state), daemon=True).start()
 
 if __name__ == "__main__":
-    emu = IgusD1Emulator()
-    try:
-        emu.start()
-    except KeyboardInterrupt:
-        emu.stop()
+    main()
