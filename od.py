@@ -1,7 +1,7 @@
 """
 od.py — Object Dictionary (OD) описание для dryve-D1
 
-© 2025 Your-Company / MIT-license
+© 2025 Aliaksandr Nazaruk / MIT-license
 """
 
 from enum import Enum
