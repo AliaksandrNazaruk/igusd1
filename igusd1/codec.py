@@ -8,7 +8,7 @@ Dictionary specification.
 import struct
 from typing import Any
 
-from drivers.igus_scripts.od import DataType
+from .od import DataType
 
 
 class CodecError(Exception):

@@ -8,14 +8,10 @@ machine, SDO layer and diagnostics.
 import time
 import logging
 from dataclasses import dataclass, field
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/../.."))
-
-from drivers.igus_scripts.protocol import DryveSDO
-from drivers.igus_scripts.machine import DriveStateMachine
-from drivers.igus_scripts.od import ODKey
-from drivers.igus_scripts.state_bits import Statusword, CW_START_MOTION, DriveState, SW_OP_MODE_SPECIFIC, parse_drive_state
+from .protocol import DryveSDO
+from .machine import DriveStateMachine
+from .od import ODKey
+from .state_bits import Statusword, CW_START_MOTION, DriveState, SW_OP_MODE_SPECIFIC, parse_drive_state
 
 _LOGGER = logging.getLogger(__name__)
 

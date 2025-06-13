@@ -7,9 +7,9 @@ machine.py — control of the dryve D1 state machine (CiA‑402).
 import time
 import logging
 
-from drivers.igus_scripts.exceptions import FaultState, OperationTimeout
-from drivers.igus_scripts.od import ODKey
-from drivers.igus_scripts.state_bits import (
+from .exceptions import FaultState, OperationTimeout
+from .od import ODKey
+from .state_bits import (
     DriveState,
     parse_drive_state,
     Statusword,
@@ -29,7 +29,7 @@ class DriveStateMachine:
         self.sdo = sdo
         self.poll_delay = poll_delay
         self.timeout = timeout
-        from drivers.igus_scripts.state_bits import parse_drive_state as default_parser
+        from .state_bits import parse_drive_state as default_parser
         self._parse_drive_state = parse_drive_state_fn or default_parser
 
     def _read_statusword(self) -> Statusword:
