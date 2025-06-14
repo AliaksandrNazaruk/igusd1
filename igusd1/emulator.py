@@ -27,7 +27,7 @@ class FakeDriveState:
         self.acceleration = 0
         self.homed = 0
         self.mode = 1
-
+        self.is_moving = False
     def set_statusword(self, status_bytes):
         """Установить статусворд по байтам [lsb, msb]."""
         sw = status_bytes[0] | (status_bytes[1] << 8)
@@ -64,40 +64,49 @@ class FakeDriveState:
         return value
     
     def move_to(self):
+        if self.is_moving or self.position == self.target_position:
+            return  # Уже двигается или уже там
         self.is_moving = True
+        self.tr = 0  # target_reached сбрасываем на время движения
         threading.Thread(target=self._move_simulation, daemon=True).start()
 
     def _move_simulation(self):
         start_pos = self.position
         end_pos = self.target_position
-        duration = 10.0  # секунд
+        duration = 10.0
         steps = 100
         step_time = duration / steps
         for i in range(steps):
-            # Линейное движение
+            # Линейное движение, имитация
             self.position = int(start_pos + (end_pos - start_pos) * (i + 1) / steps)
             self.velocity = int((end_pos - start_pos) / duration)
             time.sleep(step_time)
         self.position = end_pos
         self.velocity = 0
+        self.tr = 1  # target_reached
         self.is_moving = False
-        # Можно обновить statusword (например, target_reached)
-        self.tr = 1  # Target reached
 
     def do_home(self):
+        if self.is_moving:
+            return
         self.is_moving = True
+        self.tr = 0
         threading.Thread(target=self._home_simulation, daemon=True).start()
 
     def _home_simulation(self):
-        duration = 5.0  # секунд
+        duration = 5.0
         steps = 100
         step_time = duration / steps
-        for i in range(steps):
+        for _ in range(steps):
             time.sleep(step_time)
-        self.is_moving = False
+        self.position = 0
         self.homed = 1
-        # Можно обновить statusword (например, target_reached)
-        self.tr = 1  # Target reached
+        self.tr = 1
+        self.is_moving = False
+        self.rswon = 1
+        self.swon = 1
+        self.eo = 1
+        self.ve = 1
 
     def sdo_read(self, index, subindex):
         idx = index[1] | (index[0] << 8)
@@ -119,27 +128,38 @@ class FakeDriveState:
     def sdo_write(self, index, subindex, value):
         idx = index[1] | (index[0] << 8)
         if idx == 0x6040:  # Controlword — команда
-            # Fault reset
-            if value == 0x80:
+            if value == 0x80:  # Fault Reset
                 self.fault = 0
-                self.eo = 0
-            # Enable operation (эмулируем state machine)
-            elif value == 0x06:
-                self.set_statusword([33,6])
-            elif value == 0x07:
-                self.set_statusword([35,6])
-            elif value == 0x0F:
+                self.is_moving = False
+                self.velocity = 0
+                # Statusword: только rswon = 1, остальные 0
+                self.rswon = 1; self.swon = self.eo = self.ve = self.tr = self.warn = 0
+            elif value == 0x08:  # FAULT
+                self.fault = 1
+                self.is_moving = False
+                self.velocity = 0
+                self.eo = self.swon = self.ve = 0
+            elif value == 0x06:  # Shutdown
+                self.rswon = 1
+                self.swon = self.eo = self.ve = self.tr = 0
+                self.fault = 0
+            elif value == 0x07:  # Switch On
+                self.rswon = 1
+                self.swon = 1
+                self.eo = self.ve = self.tr = 0
+                self.fault = 0
+            elif value == 0x0F:  # Enable operation
+                self.rswon = 1
                 self.swon = 1
                 self.eo = 1
                 self.ve = 1
+                self.tr = 1 if not self.is_moving else 0
+                self.fault = 0
             # Shutdown
             elif value == 0x00:
                 self.eo = 0
                 self.swon = 0
                 self.ve = 0
-            # Fault (имитация ошибки)
-            elif value == 0x08:
-                self.fault = 1
 
             elif value == 31:
                 self.tr = 0
