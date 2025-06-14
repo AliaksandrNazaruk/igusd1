@@ -69,8 +69,12 @@ class FakeDriveState:
         return value
     
     def move_to(self):
-        if self.is_moving or self.position == self.target_position:
+        if self.position == self.target_position:
+            self.is_moving = False
+            self.tr = 1
             return  # Уже двигается или уже там
+        if self.is_moving:
+            return
         self.is_moving = True
         self.tr = 0  # target_reached сбрасываем на время движения
         threading.Thread(target=self._move_simulation, daemon=True).start()
@@ -78,8 +82,8 @@ class FakeDriveState:
     def _move_simulation(self):
         start_pos = self.position
         end_pos = self.target_position
-        duration = 10.0
-        steps = 100
+        duration = 5.0
+        steps = 1000
         step_time = duration / steps
         for i in range(steps):
             # Линейное движение, имитация
@@ -235,7 +239,7 @@ class EmulatorHTTPRequestHandler(SimpleHTTPRequestHandler):
                     data = json.dumps(fakeDrive.__dict__)
                     self.wfile.write(f'data: {data}\n\n'.encode('utf-8'))
                     self.wfile.flush()
-                    time.sleep(0.5)
+                    time.sleep(0.05)
             except Exception:
                 pass
         else:
