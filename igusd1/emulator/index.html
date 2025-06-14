@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Motor Emulator</title>
+    <style>
+        #track { position: relative; width: 800px; margin: 20px auto; }
+        #schiene { width: 100%; }
+        #tape { position: absolute; bottom: 10px; left: 0; width: 100%; }
+        #schlitten { position: absolute; bottom: 0; left: 0; width: 100px; transition: left 0.3s linear; }
+        pre { background:#f0f0f0; padding:10px; width: 800px; margin:20px auto; }
+    </style>
+</head>
+<body>
+    <div id="track">
+        <img id="schiene" src="schiene.png" alt="track" />
+        <img id="tape" src="tape-md.png" alt="tape" />
+        <img id="schlitten" src="schlitten.png" alt="sled" />
+    </div>
+    <pre id="status"></pre>
+    <script>
+        const evt = new EventSource('/events');
+        evt.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            document.getElementById('status').textContent = JSON.stringify(data, null, 2);
+            const track = document.getElementById('track');
+            const sled = document.getElementById('schlitten');
+            const max = 10000; // expected range of position
+            const trackWidth = track.clientWidth - sled.clientWidth;
+            const pos = Math.max(0, Math.min(trackWidth, (data.position / max) * trackWidth));
+            sled.style.left = pos + 'px';
+        };
+    </script>
+</body>
+</html>

@@ -2,7 +2,12 @@ import socket
 import struct
 import threading
 import time
+import json
+import os
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
+
 MODBUS_PORT = 502
+HTTP_PORT = 8000
 
 class FakeDriveState:
     def __init__(self):
@@ -208,6 +213,41 @@ def make_sdo_response(tid, index, subindex, value_bytes, read=True):
 
 fakeDrive = FakeDriveState()
 
+
+class EmulatorHTTPRequestHandler(SimpleHTTPRequestHandler):
+    """Serve static files and stream drive state via SSE."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=os.path.dirname(__file__), **kwargs)
+
+    def log_message(self, format, *args):
+        # reduce noise
+        pass
+
+    def do_GET(self):
+        if self.path == '/events':
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/event-stream')
+            self.send_header('Cache-Control', 'no-cache')
+            self.end_headers()
+            try:
+                while True:
+                    data = json.dumps(fakeDrive.__dict__)
+                    self.wfile.write(f'data: {data}\n\n'.encode('utf-8'))
+                    self.wfile.flush()
+                    time.sleep(0.5)
+            except Exception:
+                pass
+        else:
+            super().do_GET()
+
+
+def start_http_server():
+    handler = EmulatorHTTPRequestHandler
+    server = ThreadingHTTPServer(('0.0.0.0', HTTP_PORT), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    print(f'HTTP server started at http://0.0.0.0:{HTTP_PORT}')
+
 def handle_client(conn, state: FakeDriveState):
     try:
         while True:
@@ -239,6 +279,8 @@ def handle_client(conn, state: FakeDriveState):
         conn.close()
 
 def main():
+    start_http_server()
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(("0.0.0.0", MODBUS_PORT))
