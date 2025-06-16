@@ -6,8 +6,8 @@ import json
 import os
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
-MODBUS_PORT = 502
-HTTP_PORT = 8000
+MODBUS_PORT = 512
+HTTP_PORT = 8001
 
 class FakeDriveState:
     def __init__(self):
@@ -88,10 +88,10 @@ class FakeDriveState:
         for i in range(steps):
             # Линейное движение, имитация
             self.position = int(start_pos + (end_pos - start_pos) * (i + 1) / steps)
-            self.velocity = int((end_pos - start_pos) / duration)
             time.sleep(step_time)
         self.position = end_pos
         self.velocity = 0
+        self.acceleration = 0
         self.tr = 1  # target_reached
         self.is_moving = False
 
