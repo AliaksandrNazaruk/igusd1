@@ -1,0 +1,16 @@
+services:
+  emulator:
+    build: .
+    image: test_modbus:latest
+    container_name: test_modbus
+    ports:
+      - "8001:8001"   # HTTP server
+      - "1502:502"     # Modbus TCP (host 1502 -> container 502)
+      - "10000:10000" # WebSocket
+      - "9999:9999"
+      - "9998:9998"
+      - "9997:9997"
+    restart: unless-stopped
+
+
+
